@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import { initialize } from '../plugins/nexo/runtime/project.mjs';
 import { Store } from '../plugins/nexo/runtime/store.mjs';
 export function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nexo-test-'));
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'nexo-test-')));
   initialize(root, 'Nexo Workspace');
   const store = new Store(root);
   return {

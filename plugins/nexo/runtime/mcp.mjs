@@ -36784,7 +36784,7 @@ function atomicWrite(file2, data, mode = 384) {
   }
 }
 function findProject(cwd = process.cwd()) {
-  let current = fs.realpathSync(cwd);
+  let current = fs.realpathSync.native(cwd);
   for (; ; ) {
     if (fs.existsSync(path.join(current, ".nexo", "project.json"))) return current;
     const up = path.dirname(current);
@@ -36804,7 +36804,7 @@ function loadConfig(root2) {
   return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, "project.json"), "utf8")));
 }
 function initialize(cwd = process.cwd(), name, options = {}) {
-  let root2 = fs.realpathSync(cwd);
+  let root2 = fs.realpathSync.native(cwd);
   if (!options.exact)
     try {
       root2 = execFileSync("git", ["-C", root2, "rev-parse", "--show-toplevel"], {
@@ -36814,7 +36814,7 @@ function initialize(cwd = process.cwd(), name, options = {}) {
       }).trim();
     } catch {
     }
-  root2 = fs.realpathSync(root2);
+  root2 = fs.realpathSync.native(root2);
   const dir = path.join(root2, ".nexo");
   if (fs.existsSync(path.join(dir, "project.json")))
     return { root: root2, config: loadConfig(root2), created: false };
@@ -36879,7 +36879,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 var wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function ensureServer(root2 = findProject()) {
-  root2 = fs2.realpathSync(root2);
+  root2 = fs2.realpathSync.native(root2);
   const dir = localDir(root2), file2 = path2.join(dir, "server.json"), lock = path2.join(dir, "startup.lock");
   const existing = async () => {
     try {

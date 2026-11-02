@@ -13,7 +13,7 @@ type Registry = {
 };
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function ensureServer(root = findProject()): Promise<Registry> {
-  root = fs.realpathSync(root);
+  root = fs.realpathSync.native(root);
   const dir = localDir(root),
     file = path.join(dir, 'server.json'),
     lock = path.join(dir, 'startup.lock');

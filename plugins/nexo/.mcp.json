@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "nexo": {
-      "command": "node",
+      "command": "${user_config.node_path}",
       "args": ["--disable-warning=ExperimentalWarning", "${CLAUDE_PLUGIN_ROOT}/runtime/mcp.mjs"]
     }
   }

@@ -1544,6 +1544,16 @@ dialog::backdrop {
   }
 }
 @media (max-width: 420px) {
+  .toolbar {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tabs {
+    gap: 10px;
+  }
+  .tabs button {
+    font-size: 10px;
+  }
   .delivery-summary {
     grid-template-columns: 1fr;
   }

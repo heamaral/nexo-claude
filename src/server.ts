@@ -218,7 +218,7 @@ export async function startServer(
                 400,
               );
               const workspace =
-                typeof body.workspace === 'string' ? fs.realpathSync(body.workspace) : root;
+                typeof body.workspace === 'string' ? fs.realpathSync.native(body.workspace) : root;
               const absolute = path.resolve(workspace, body.filePath),
                 relative = path.relative(workspace, absolute).replaceAll('\\', '/');
               assert(

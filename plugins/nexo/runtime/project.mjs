@@ -19852,7 +19852,7 @@ function atomicWrite(file2, data, mode = 384) {
   }
 }
 function findProject(cwd = process.cwd()) {
-  let current = fs.realpathSync(cwd);
+  let current = fs.realpathSync.native(cwd);
   for (; ; ) {
     if (fs.existsSync(path.join(current, ".nexo", "project.json"))) return current;
     const up = path.dirname(current);
@@ -19872,7 +19872,7 @@ function loadConfig(root) {
   return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, "project.json"), "utf8")));
 }
 function initialize(cwd = process.cwd(), name, options = {}) {
-  let root = fs.realpathSync(cwd);
+  let root = fs.realpathSync.native(cwd);
   if (!options.exact)
     try {
       root = execFileSync("git", ["-C", root, "rev-parse", "--show-toplevel"], {
@@ -19882,7 +19882,7 @@ function initialize(cwd = process.cwd(), name, options = {}) {
       }).trim();
     } catch {
     }
-  root = fs.realpathSync(root);
+  root = fs.realpathSync.native(root);
   const dir = path.join(root, ".nexo");
   if (fs.existsSync(path.join(dir, "project.json")))
     return { root, config: loadConfig(root), created: false };

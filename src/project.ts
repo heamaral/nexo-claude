@@ -33,7 +33,7 @@ export function atomicWrite(file: string, data: string | Buffer, mode = 0o600) {
   }
 }
 export function findProject(cwd = process.cwd()): string {
-  let current = fs.realpathSync(cwd);
+  let current = fs.realpathSync.native(cwd);
   for (;;) {
     if (fs.existsSync(path.join(current, '.nexo', 'project.json'))) return current;
     const up = path.dirname(current);
@@ -53,7 +53,7 @@ export function loadConfig(root: string): Config {
   return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, 'project.json'), 'utf8')));
 }
 export function initialize(cwd = process.cwd(), name?: string, options: { exact?: boolean } = {}) {
-  let root = fs.realpathSync(cwd);
+  let root = fs.realpathSync.native(cwd);
   // Initialize the current repository, but preserve explicit nested project directories.
   if (!options.exact)
     try {
@@ -63,7 +63,7 @@ export function initialize(cwd = process.cwd(), name?: string, options: { exact?
         windowsHide: true,
       }).trim();
     } catch {}
-  root = fs.realpathSync(root);
+  root = fs.realpathSync.native(root);
   const dir = path.join(root, '.nexo');
   if (fs.existsSync(path.join(dir, 'project.json')))
     return { root, config: loadConfig(root), created: false };

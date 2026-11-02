@@ -20849,7 +20849,7 @@ data: {}
                 "Caminho de arquivo necess\xE1rio",
                 400
               );
-              const workspace = typeof body.workspace === "string" ? fs3.realpathSync(body.workspace) : root;
+              const workspace = typeof body.workspace === "string" ? fs3.realpathSync.native(body.workspace) : root;
               const absolute = path3.resolve(workspace, body.filePath), relative = path3.relative(workspace, absolute).replaceAll("\\", "/");
               assert2(
                 relative && !relative.startsWith("../") && !path3.isAbsolute(relative),
