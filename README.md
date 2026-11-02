@@ -27,6 +27,8 @@ No diretório do projeto:
 /board
 ```
 
+Se o Node 24 não for o padrão do sistema, configure o executável na instalação: `claude plugin install nexo --marketplace heamaral/nexo-claude --config node_path=/caminho/para/node`. Caminhos com espaços devem ser passados entre aspas. Isso configura apenas o plugin.
+
 O comando do plugin é `/nexo:board`. A inicialização também cria o alias de projeto `/board` em `.claude/commands/board.md`, sem sobrescrever um comando existente. Comandos ficam no menu de slash commands; o plugin não modifica o menu nativo do aplicativo Claude Desktop. Este pacote é para **Claude Code**, inclusive o ambiente Code dentro do Desktop quando ele oferece plugins, e não uma extensão `.mcpb` de chat comum.
 
 Para teste local sem instalar o marketplace:

@@ -40,3 +40,7 @@ Fixture: 1.000 cards em cadeia de dependências, 1.001 eventos, uma entrega, sem
 | Snapshot resultante                               |         1,27 MB |
 
 O ledger usa cache de metadados, fronteira causal persistida e consultas indexadas para evitar releitura de todos os arquivos em cada comando. O replay e snapshots ainda percorrem o histórico completo. Um SLO para dezenas de milhares de cards e múltiplos usuários permanece fora desta evidência.
+
+## Distribuição
+
+A instalação foi concluída a partir de `heamaral/nexo-claude` privado, em perfil Claude e projeto isolados no workspace, com scope project e configuração node_path explícita. O CLI confirmou o plugin habilitado na versão 1.0.0-rc.1. O CI do commit 0346bd4 passou nas verificações de Windows, Linux, macOS e navegador Chromium Linux: https://github.com/heamaral/nexo-claude/actions/runs/41541804042.

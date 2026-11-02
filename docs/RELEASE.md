@@ -8,8 +8,9 @@ Os testes exercitam oito solicitações de claim simultâneas, perda de lease, c
 
 Antes da promoção para 1.0.0 estável:
 
-- [ ] CI completo Windows/Linux/macOS no commit publicado.
-- [ ] Instalar marketplace privado no Claude autenticado e conferir `/board` após init.
+- [x] CI Windows/Linux/macOS e Chromium Linux no commit 0346bd4; correções de caminhos e layout confirmadas.
+- [x] Marketplace privado e instalação por projeto validados em perfil Claude isolado, incluindo node_path configurado.
+- [ ] Piloto interativo no menu `/board` na instalação principal do usuário.
 - [x] Planner/worker nativos criaram e concluíram uma entrega de teste, com entrada/saída observada.
 - [ ] Piloto de feature real com edição, integração e reviewer no mesmo commit.
 - [x] Duas sessões simultâneas em worktrees distintos, apontando ao mesmo coordenador.

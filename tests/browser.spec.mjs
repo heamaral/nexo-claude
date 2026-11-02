@@ -5,6 +5,7 @@ import { chromium } from '@playwright/test';
 import { startServer } from '../plugins/nexo/runtime/server.mjs';
 import { fixture, seed, claim, command } from './helpers.mjs';
 test('real board: live agents, themes, modals, flow, mobile and reduced motion', async () => {
+  fs.mkdirSync('test-results', { recursive: true });
   const f = fixture();
   f.store.close();
   const s = await startServer(f.root, { registry: false });
@@ -55,10 +56,10 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
     await page.getByRole('tab', { name: 'Times', exact: true }).click();
     await page.getByText('Backend agent', { exact: true }).waitFor();
     assert.equal(await page.locator('.team-card .orbit').count(), 2);
-    await page.screenshot({ path: 'docs/board-dark.png', fullPage: true });
+    await page.screenshot({ path: 'test-results/board-dark.png', fullPage: true });
     await page.getByRole('button', { name: 'Ativar tema claro' }).click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
-    await page.screenshot({ path: 'docs/board-light.png', fullPage: true });
+    await page.screenshot({ path: 'test-results/board-light.png', fullPage: true });
     await page.getByRole('tab', { name: 'Board', exact: true }).click();
     const before = await page
       .locator('.task-card .orbit rect')
@@ -117,7 +118,7 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
       );
       await page.keyboard.press('Escape');
     }
-    await page.screenshot({ path: 'docs/board-mobile.png', fullPage: true });
+    await page.screenshot({ path: 'test-results/board-mobile.png', fullPage: true });
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
