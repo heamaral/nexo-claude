@@ -1,0 +1,9 @@
+{
+  "name": "nexo",
+  "displayName": "Nexo",
+  "version": "1.0.0-rc.1",
+  "description": "Entregas, planejamento hierárquico, agentes e board local em tempo real para cada projeto.",
+  "author": { "name": "Henrique Barcellos" },
+  "homepage": "https://github.com/heamaral/nexo-claude",
+  "repository": "https://github.com/heamaral/nexo-claude"
+}

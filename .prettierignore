@@ -1,0 +1,7 @@
+node_modules/
+plugins/nexo/runtime/
+pnpm-lock.yaml
+THIRD_PARTY_NOTICES.md
+test-results/
+playwright-report/
+.nexo/
