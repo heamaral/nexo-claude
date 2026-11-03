@@ -6,7 +6,7 @@
 
 ## Estado da versão
 
-`1.0.0-rc.1` é uma release candidate funcional, com testes automatizados de persistência, concorrência, segurança HTTP, MCP e navegador. O lifecycle nativo com planner/worker e duas sessões em worktrees foi validado. A promoção estável depende do CI nas plataformas suportadas e de um piloto completo de implementação e integração. Não há alegação de suporte ilimitado de escala ou de isolamento de sistema operacional por leases.
+`1.0.0-rc.2` é uma release candidate funcional, com testes automatizados de persistência, concorrência, segurança HTTP, MCP e navegador. O lifecycle nativo com planner/worker e duas sessões em worktrees foi validado. A promoção estável depende do CI nas plataformas suportadas e de um piloto completo de implementação e integração. Não há alegação de suporte ilimitado de escala ou de isolamento de sistema operacional por leases.
 
 ## Instalação
 
@@ -61,7 +61,7 @@ SQLite é adequado para consultas relacionais, hierarquia e transações locais.
 ## Experiência do board
 
 - Portfólio de entregas, com resultado e fluxo preservados após aceitação.
-- Dentro de cada entrega: **Board, Times e Caminho**. Agentes sempre têm contexto de entrega/card.
+- Dentro de cada entrega: **Board, Times e Caminho**. Caminho agora é um grafo interativo com ramificações, junções, zoom, pan e modos de dependências/hierarquia; cada card aparece uma única vez.
 - Colunas e gates configuráveis no workflow da entrega pelo Claude.
 - Cards com critérios, dependências, bloqueio vermelho, subtarefas, evidências e resultado em modal.
 - Progresso conta folhas, sem somar pais e filhos duas vezes.

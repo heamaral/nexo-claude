@@ -20655,6 +20655,9 @@ function assertAcyclic(start, next, message) {
   }
 }
 
+// src/version.ts
+var VERSION = "1.0.0-rc.2";
+
 // src/server.ts
 async function startServer(root, options = {}) {
   const store = new Store(root), token = options.token ?? crypto3.randomBytes(32).toString("base64url"), instance = crypto3.randomUUID();
@@ -20732,7 +20735,7 @@ data: ${JSON.stringify({ revision: store.revision, error: error62 })}
         403
       );
       if (url2.pathname === "/api/health" && req.method === "GET")
-        return send(res, 200, { instance, version: "1.0.0-rc.1" });
+        return send(res, 200, { instance, version: VERSION });
       const bearer = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : "";
       const candidate = Buffer.from(bearer), secret = Buffer.from(token);
       const privileged = candidate.length === secret.length && crypto3.timingSafeEqual(candidate, secret);

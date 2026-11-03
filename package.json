@@ -1,6 +1,6 @@
 {
   "name": "nexo-claude",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "private": true,
   "type": "module",
   "description": "Project-local delivery planning, agent coordination and live kanban for Claude Code",
@@ -12,7 +12,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test --test-concurrency=1 tests/*.test.mjs",
-    "test:browser": "node --test tests/browser.spec.mjs",
+    "test:browser": "node --test --test-concurrency=1 tests/*.spec.mjs",
     "check": "node scripts/check.mjs",
     "validate:plugin": "claude plugin validate plugins/nexo --strict",
     "start": "node plugins/nexo/runtime/cli.mjs board",

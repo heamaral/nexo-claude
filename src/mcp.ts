@@ -4,11 +4,9 @@ import { z } from 'zod';
 import { findProject, initialize } from './project.js';
 import { board, ensureServer, request } from './client.js';
 import { claimSchema, commandSchema } from './model.js';
+import { VERSION } from './version.js';
 
-const server = new McpServer(
-  { name: 'nexo', version: '1.0.0-rc.1' },
-  { maxToolInputElements: 20000 },
-);
+const server = new McpServer({ name: 'nexo', version: VERSION }, { maxToolInputElements: 20000 });
 const root = () =>
   findProject(process.env.NEXO_PROJECT_ROOT ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
 const wrap = (fn: (args: any) => Promise<unknown>) => async (args: any) => {

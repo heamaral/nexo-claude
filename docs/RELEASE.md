@@ -1,5 +1,9 @@
 # Gates de lançamento
 
+## 1.0.0-rc.2
+
+Caminho agora usa um grafo interativo com ramificações, junções, modos de dependências e hierarquia, contexto externo, zoom/pan e tela cheia. O upgrade substitui um servidor antigo de forma graciosa, preservando cards e leases. Consulte [o guia do grafo](GRAPH.md). Nenhuma migração do banco é necessária.
+
 ## 1.0.0-rc.1
 
 Implementado: plugin Claude Code com marketplace privado, MCP stdio empacotado, planner/worker/reviewer, skills, hooks, estado por diretório, SQLite/ledger, leases com fencing, workflow por entrega, evidências, prevenção de ciclos, histórico aceito imutável, FTS5, serviço loopback autenticado, SSE, board real claro/escuro e modais.
