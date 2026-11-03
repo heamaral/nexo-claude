@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { atomicWrite, findProject, localDir } from './project.js';
+import { VERSION, compareVersions } from './version.js';
 type Registry = {
   version: number;
   pid: number;
@@ -10,6 +11,7 @@ type Registry = {
   port: number;
   token: string;
   root: string;
+  runtimeVersion?: string;
 };
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function ensureServer(root = findProject()): Promise<Registry> {
@@ -32,17 +34,20 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
         signal: AbortSignal.timeout(700),
       });
       const health = (await response.json()) as any;
-      if (health.instance === r.instance) return r;
+      if (health.instance === r.instance && typeof health.version === 'string')
+        return { ...r, runtimeVersion: health.version };
     } catch {}
   };
   const running = await existing();
-  if (running) return running;
+  const reusable = (r: Registry | undefined) =>
+    !!r?.runtimeVersion && compareVersions(r.runtimeVersion, VERSION) >= 0;
+  if (reusable(running)) return running!;
   try {
     fs.mkdirSync(lock);
   } catch {
-    for (let attempt = 0; attempt < 40; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
       const r = await existing();
-      if (r) return r;
+      if (reusable(r)) return r!;
       await wait(250);
     }
     // Never kill a PID based only on a stale registry. A stale startup lock can be retried safely.
@@ -54,7 +59,35 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
   }
   try {
     const r = await existing();
-    if (r) return r;
+    if (reusable(r)) return r!;
+    if (r) {
+      // Authenticated graceful shutdown drains writes and preserves the live SQLite leases.
+      // Never kill a PID or downgrade a newer runtime used by another session.
+      const response = await fetch(`http://127.0.0.1:${r.port}/api/shutdown`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${r.token}` },
+        body: '{}',
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok)
+        throw new Error(
+          'Nexo could not gracefully upgrade the board service. Retry after the current session completes.',
+        );
+      await response.text();
+      for (let i = 0; i < 300; i++) {
+        try {
+          if (JSON.parse(fs.readFileSync(file, 'utf8')).instance !== r.instance) break;
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT') break;
+          throw e;
+        }
+        await wait(50);
+      }
+      if (fs.existsSync(file) && JSON.parse(fs.readFileSync(file, 'utf8')).instance === r.instance)
+        throw new Error(
+          'Nexo is still closing its previous board service. Retry shortly; no second writer was started.',
+        );
+    }
     try {
       const previous = JSON.parse(fs.readFileSync(file, 'utf8')) as Registry;
       if (previous.root === root && Number.isInteger(previous.pid)) {
@@ -94,7 +127,7 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
     for (let attempt = 0; attempt < 60; attempt++) {
       if (spawnError) throw spawnError;
       const value = await existing();
-      if (value) return value;
+      if (reusable(value)) return value!;
       await wait(100);
     }
     throw new Error('O board não iniciou. Consulte .nexo/local/server.log e /nexo:doctor.');

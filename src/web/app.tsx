@@ -33,6 +33,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import './styles.css';
+import { DeliveryGraph } from './delivery-graph.js';
 type Entity = {
   kind: 'delivery' | 'team' | 'task';
   id: string;
@@ -831,58 +832,17 @@ function App() {
             </>
           )}
           {delivery && view === 'path' && (
-            <div className="path">
-              <div className="section-intro">
-                <div>
-                  <h2>Do primeiro passo ao resultado</h2>
-                  <p>Dependências entre cards. Clique para inspecionar cada etapa.</p>
-                </div>
-                <span className="pill">
-                  <GitBranch />
-                  {selectedTasks.reduce((n, t) => n + t.data.dependencies.length, 0)} conexões
-                </span>
-              </div>
-              {shown.slice(0, limit).map((t) => (
-                <div className="path-row" key={t.id}>
-                  <div className="path-deps">
-                    {t.data.dependencies.length ? (
-                      t.data.dependencies.map((id: string) => (
-                        <button
-                          key={id}
-                          className={'dependency-chip ' + (get(id) && done(get(id)!) ? 'done' : '')}
-                          onClick={() => open({ type: 'entity', id })}
-                        >
-                          {get(id) && done(get(id)!) ? <Check /> : <Clock3 />}
-                          {get(id)?.data.title ?? id}
-                        </button>
-                      ))
-                    ) : (
-                      <span className="muted">Ponto de partida</span>
-                    )}
-                  </div>
-                  <ChevronRight className="path-arrow" />
-                  {card(t)}
-                  <div className="path-target">
-                    {t.data.parentId ? (
-                      <button
-                        className="text-link"
-                        onClick={() => open({ type: 'entity', id: t.data.parentId })}
-                      >
-                        <Layers />
-                        {get(t.data.parentId)?.data.title}
-                      </button>
-                    ) : (
-                      <span>
-                        <Target />
-                        {delivery.data.title}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DeliveryGraph
+              delivery={delivery}
+              tasks={selectedTasks}
+              entities={entities}
+              agents={agents}
+              query={query}
+              onOpen={(id) => open({ type: 'entity', id })}
+            />
           )}
-          {(shown.length > limit || (deliveries.length > limit && !delivery && !all)) && (
+          {(((all || (delivery && view === 'board')) && shown.length > limit) ||
+            (deliveries.length > limit && !delivery && !all)) && (
             <button className="button load-more" onClick={() => setLimit((n) => n + 60)}>
               Carregar mais
             </button>

@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { Store } from './store.js';
+import { VERSION } from './version.js';
 import { NexoError, assert } from './model.js';
 import { atomicWrite, localDir, loadConfig } from './project.js';
 
@@ -97,7 +98,7 @@ export async function startServer(
         403,
       );
       if (url.pathname === '/api/health' && req.method === 'GET')
-        return send(res, 200, { instance, version: '1.0.0-rc.1' });
+        return send(res, 200, { instance, version: VERSION });
       const bearer = req.headers.authorization?.startsWith('Bearer ')
         ? req.headers.authorization.slice(7)
         : '';

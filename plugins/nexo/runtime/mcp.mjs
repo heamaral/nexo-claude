@@ -36877,6 +36877,35 @@ import fs2 from "node:fs";
 import path2 from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
+// src/version.ts
+var VERSION = "1.0.0-rc.2";
+function compareVersions(a, b) {
+  const parse3 = (s) => {
+    const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
+    if (!match) throw new Error("Unsupported Nexo runtime version: " + s);
+    return { core: match.slice(1, 4).map(Number), pre: match[4]?.split(".") };
+  };
+  const x = parse3(a), y = parse3(b);
+  for (let i = 0; i < 3; i++) if (x.core[i] !== y.core[i]) return x.core[i] - y.core[i];
+  if (!x.pre || !y.pre) return x.pre ? -1 : y.pre ? 1 : 0;
+  for (let i = 0; i < Math.max(x.pre.length, y.pre.length); i++) {
+    const left = x.pre[i], right = y.pre[i];
+    if (left === right) continue;
+    if (left === void 0 || right === void 0) return left === void 0 ? -1 : 1;
+    const ln = /^\d+$/.test(left), rn = /^\d+$/.test(right);
+    if (ln && rn) {
+      const difference = Number(left) - Number(right);
+      if (difference) return difference;
+      continue;
+    }
+    if (ln !== rn) return ln ? -1 : 1;
+    return left < right ? -1 : 1;
+  }
+  return 0;
+}
+
+// src/client.ts
 var wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function ensureServer(root2 = findProject()) {
   root2 = fs2.realpathSync.native(root2);
@@ -36890,18 +36919,20 @@ async function ensureServer(root2 = findProject()) {
         signal: AbortSignal.timeout(700)
       });
       const health = await response.json();
-      if (health.instance === r.instance) return r;
+      if (health.instance === r.instance && typeof health.version === "string")
+        return { ...r, runtimeVersion: health.version };
     } catch {
     }
   };
   const running = await existing();
-  if (running) return running;
+  const reusable = (r) => !!r?.runtimeVersion && compareVersions(r.runtimeVersion, VERSION) >= 0;
+  if (reusable(running)) return running;
   try {
     fs2.mkdirSync(lock);
   } catch {
-    for (let attempt = 0; attempt < 40; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
       const r = await existing();
-      if (r) return r;
+      if (reusable(r)) return r;
       await wait(250);
     }
     if (fs2.existsSync(lock) && Date.now() - fs2.statSync(lock).mtimeMs > 3e4) {
@@ -36912,7 +36943,33 @@ async function ensureServer(root2 = findProject()) {
   }
   try {
     const r = await existing();
-    if (r) return r;
+    if (reusable(r)) return r;
+    if (r) {
+      const response = await fetch(`http://127.0.0.1:${r.port}/api/shutdown`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${r.token}` },
+        body: "{}",
+        signal: AbortSignal.timeout(15e3)
+      });
+      if (!response.ok)
+        throw new Error(
+          "Nexo could not gracefully upgrade the board service. Retry after the current session completes."
+        );
+      await response.text();
+      for (let i = 0; i < 300; i++) {
+        try {
+          if (JSON.parse(fs2.readFileSync(file2, "utf8")).instance !== r.instance) break;
+        } catch (e) {
+          if (e.code === "ENOENT") break;
+          throw e;
+        }
+        await wait(50);
+      }
+      if (fs2.existsSync(file2) && JSON.parse(fs2.readFileSync(file2, "utf8")).instance === r.instance)
+        throw new Error(
+          "Nexo is still closing its previous board service. Retry shortly; no second writer was started."
+        );
+    }
     try {
       const previous = JSON.parse(fs2.readFileSync(file2, "utf8"));
       if (previous.root === root2 && Number.isInteger(previous.pid)) {
@@ -36952,7 +37009,7 @@ async function ensureServer(root2 = findProject()) {
     for (let attempt = 0; attempt < 60; attempt++) {
       if (spawnError) throw spawnError;
       const value = await existing();
-      if (value) return value;
+      if (reusable(value)) return value;
       await wait(100);
     }
     throw new Error("O board n\xE3o iniciou. Consulte .nexo/local/server.log e /nexo:doctor.");
@@ -36998,10 +37055,7 @@ async function board(root2, open2 = true) {
 }
 
 // src/mcp.ts
-var server = new McpServer(
-  { name: "nexo", version: "1.0.0-rc.1" },
-  { maxToolInputElements: 2e4 }
-);
+var server = new McpServer({ name: "nexo", version: VERSION }, { maxToolInputElements: 2e4 });
 var root = () => findProject(process.env.NEXO_PROJECT_ROOT ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
 var wrap = (fn) => async (args) => {
   try {
