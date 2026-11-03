@@ -20018,8 +20018,7 @@ async function ensureServer(root = findProject()) {
     fs2.mkdirSync(lock);
   } catch {
     for (let attempt = 0; attempt < 120; attempt++) {
-      const r = await existing();
-      if (reusable(r)) return r;
+      if (!fs2.existsSync(lock)) return ensureServer(root);
       await wait(250);
     }
     if (fs2.existsSync(lock) && Date.now() - fs2.statSync(lock).mtimeMs > 3e4) {

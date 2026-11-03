@@ -46,8 +46,10 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
     fs.mkdirSync(lock);
   } catch {
     for (let attempt = 0; attempt < 120; attempt++) {
-      const r = await existing();
-      if (reusable(r)) return r!;
+      // Probing health on a waiting client's keep-alive socket can keep the old
+      // server busy indefinitely while its owner is trying to drain it.
+      // Let the lock owner finish the handoff before opening another connection.
+      if (!fs.existsSync(lock)) return ensureServer(root);
       await wait(250);
     }
     // Never kill a PID based only on a stale registry. A stale startup lock can be retried safely.
