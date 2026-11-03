@@ -1,10 +1,11 @@
 ---
 name: init
-description: Inicializar o planejamento e o board Nexo no projeto atual.
+description: Initialize Nexo planning and the live board in the current project.
 disable-model-invocation: true
 ---
 
-Use o MCP `init` para o diretório deste projeto. Ele cria `.nexo/project.json`, histórico de eventos, snapshot SQLite, regras em `.claude/rules/nexo.md` e alias `.claude/commands/board.md`, preservando arquivos existentes.
-Depois use `board_open`. Explique que `.nexo/local/` é ignorada e que os demais arquivos de `.nexo/` são versionáveis.
-Se já existe um comando `/board`, mantenha-o e informe que `/nexo:board` continua disponível.
-Não acrescente permissões globais, não habilite Agent Teams experimentalmente e não altere configurações de outros projetos.
+Call MCP `init` for this project. It scaffolds `.nexo/project.json`, the event ledger, SQLite snapshot, English technical rules in `.claude/rules/nexo.md` and the `.claude/commands/board.md` alias, preserving existing files.
+Call `board_open`. Explain that `.nexo/local/` is ignored by Git and durable project data can be committed. Preserve existing `/board` commands; `/nexo:board` remains available.
+Do not grant global permissions, enable experimental Agent Teams or modify other projects.
+
+Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.

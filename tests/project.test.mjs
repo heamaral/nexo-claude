@@ -17,10 +17,16 @@ test('nearest nested board wins, init is idempotent and existing project command
     assert.equal(findProject(nested), nested);
     assert.notEqual(created.config.id, f.store.config.id);
     const alias = path.join(nested, '.claude/commands/board.md');
+    const rule = path.join(nested, '.claude/rules/nexo.md');
+    assert.match(fs.readFileSync(rule, 'utf8'), /Technical instructions use English/);
+    assert.match(fs.readFileSync(rule, 'utf8'), /Respond in the user's language/);
+    assert.match(fs.readFileSync(alias, 'utf8'), /Invoke the `nexo:board` skill/);
+    fs.writeFileSync(rule, 'Custom project instructions in another language');
     fs.writeFileSync(alias, 'Existing user command');
     const again = initialize(nested, undefined, { exact: true });
     assert.equal(again.created, false);
     assert.equal(fs.readFileSync(alias, 'utf8'), 'Existing user command');
+    assert.equal(fs.readFileSync(rule, 'utf8'), 'Custom project instructions in another language');
   } finally {
     f.close();
   }

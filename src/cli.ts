@@ -177,7 +177,7 @@ async function main() {
         JSON.stringify({
           hookSpecificOutput: {
             hookEventName: event,
-            additionalContext: `Nexo ativo neste projeto. Sua identidade: agentId=${agentId}; sessionId=${sessionId}. Consulte state, obtenha claim no card antes de escrever ou executar shell e use esses IDs. Registre resultado/evidências antes de concluir; heartbeat mantém a lease; release encerra o vínculo. O planner cria entregas, times, hierarquia e dependências via MCP. /board abre o acompanhamento.`,
+            additionalContext: `Nexo is enabled for this project. Your identity: agentId=${agentId}; sessionId=${sessionId}. Read state and claim your card using these IDs before writing or running shell tools. Record results and evidence before completion; heartbeat renews the lease and release ends participation. Use nexo:planner to organize deliveries, teams, hierarchy and dependencies through MCP. /board opens the live board. Respond in the user's language and preserve the language of project content.`,
           },
         }),
       );

@@ -19926,13 +19926,13 @@ function initialize(cwd = process.cwd(), name, options = {}) {
   if (!fs.existsSync(command))
     atomicWrite(
       command,
-      "---\ndescription: Abrir o board Nexo deste projeto\n---\nExecute a skill `nexo:board` para abrir o board do projeto atual.\n"
+      "---\ndescription: Open the live Nexo board for this project\n---\nInvoke the `nexo:board` skill for the current project. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
     );
   const rule = path.join(root, ".claude", "rules", "nexo.md");
   if (!fs.existsSync(rule))
     atomicWrite(
       rule,
-      "# Nexo\n\nEste projeto usa `.nexo/` como registro de entregas. Consulte as ferramentas MCP Nexo antes de iniciar trabalho.\nNovos pedidos ap\xF3s uma entrega aceita criam outra entrega. Preserve o hist\xF3rico.\nPlaneje hierarquia e depend\xEAncias separadamente. Nunca conclua cards sem evid\xEAncia.\nAntes de delegar, associe cada agente ao card e ao time, registre os escopos de escrita e obtenha uma lease.\nRenove a lease durante o trabalho; libere ao terminar. Uma resposta de subagente n\xE3o prova conclus\xE3o do card.\nUse worktrees distintos para times que escrevem em paralelo. Teste a vers\xE3o integrada antes da aceita\xE7\xE3o.\nN\xE3o edite o SQLite nem os eventos manualmente. Use o MCP e execute `/nexo:board` para acompanhar.\n"
+      "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Read Nexo MCP state before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
     );
   return { root, config: config2, created: true };
 }
@@ -21363,7 +21363,7 @@ ${prompt}`
         JSON.stringify({
           hookSpecificOutput: {
             hookEventName: event,
-            additionalContext: `Nexo ativo neste projeto. Sua identidade: agentId=${agentId}; sessionId=${sessionId}. Consulte state, obtenha claim no card antes de escrever ou executar shell e use esses IDs. Registre resultado/evid\xEAncias antes de concluir; heartbeat mant\xE9m a lease; release encerra o v\xEDnculo. O planner cria entregas, times, hierarquia e depend\xEAncias via MCP. /board abre o acompanhamento.`
+            additionalContext: `Nexo is enabled for this project. Your identity: agentId=${agentId}; sessionId=${sessionId}. Read state and claim your card using these IDs before writing or running shell tools. Record results and evidence before completion; heartbeat renews the lease and release ends participation. Use nexo:planner to organize deliveries, teams, hierarchy and dependencies through MCP. /board opens the live board. Respond in the user's language and preserve the language of project content.`
           }
         })
       );

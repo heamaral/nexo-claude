@@ -1,6 +1,9 @@
 ---
 name: status
-description: Consultar progresso, impedimentos e agentes do projeto Nexo.
+description: Inspect Nexo project progress, blockers and agents.
 ---
 
-Consulte `state` e resuma entregas abertas, progresso das folhas (sem contar pais duas vezes), impedimentos explícitos, dependências pendentes e agentes trabalhando/sem contato. Cite IDs dos cards relevantes. Não confunda uma etapa chamada “Em progresso” com um agente cuja lease está ativa. Ofereça `/board` para acompanhamento visual.
+Read `state`. Summarize open deliveries, leaf-task progress without double-counting parents, explicit blockers, pending dependencies and agents working or out of contact. Cite relevant card IDs.
+Distinguish a workflow stage from a currently active lease. Offer `/board` for visual monitoring.
+
+Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.
