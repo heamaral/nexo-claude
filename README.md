@@ -104,3 +104,7 @@ pnpm validate:plugin
 O código-fonte está em `src/`; o runtime empacotado em `plugins/nexo/runtime/` é versionado para instalação direta pelo marketplace. CI verifica tipos, build reproduzível, testes, auditoria e validação oficial. Dependências estão fixadas no lockfile; scripts de instalação são permitidos apenas para esbuild e o CLI oficial usado na validação.
 
 Projeto privado e proprietário, sem publicação no npm nem hospedagem em nuvem. Licenças de terceiros ficam preservadas em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Language policy
+
+Agent instructions and newly scaffolded project rules use English; agents respond in the user's language and preserve project content. The UI is currently Portuguese. See [the language policy and MCP naming explanation](docs/LANGUAGE.md).
