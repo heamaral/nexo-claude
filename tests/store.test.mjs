@@ -131,12 +131,12 @@ test('evidence, parent progress and accepted delivery history are enforced', () 
     f.close();
   }
 });
-test('closed SQLite snapshot excludes leases, recovers from events, follows branch event removal', () => {
+test('closed SQLite snapshot excludes leases, recovers from events, follows branch event removal', async () => {
   const f = fixture();
   try {
     seed(f.store);
     const a = f.store.claim(claim());
-    f.store.snapshot();
+    await f.store.snapshot();
     const snapshot = new DatabaseSync(path.join(f.root, '.nexo/project.sqlite'), {
       readOnly: true,
     });

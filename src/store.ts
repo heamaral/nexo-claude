@@ -18,6 +18,8 @@ import {
   teamSchema,
 } from './model.js';
 import { atomicWrite, loadConfig, localDir, safeEventsDir } from './project.js';
+import { acquireWriter } from './locks.js';
+import { Snapshots } from './snapshots.js';
 
 const schema = `PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -46,12 +48,14 @@ const schemaFor = (kind: Kind) =>
   kind === 'delivery' ? deliverySchema : kind === 'task' ? taskSchema : teamSchema;
 
 export class Store {
-  db: DatabaseSync;
+  db!: DatabaseSync;
   config;
   dir: string;
   eventsDir: string;
   revision = 0;
-  onChange = () => {};
+  onChange = (_durable: boolean) => {};
+  snapshots!: Snapshots;
+  private releaseWriter: () => void;
   closed = false;
   private directoryStamp = '';
   private fileCache = new Map<string, { stamp: string; event: Event }>();
@@ -59,32 +63,47 @@ export class Store {
     this.config = loadConfig(root);
     this.dir = localDir(root);
     this.eventsDir = safeEventsDir(root);
-    this.db = new DatabaseSync(path.join(this.dir, 'state.sqlite'), { timeout: 5000 });
-    this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
-    this.db.exec(schema);
-    const version = this.db.prepare('SELECT value FROM meta WHERE key=?').get('schema');
-    assert(
-      !version || version.value === '1',
-      'SCHEMA_VERSION',
-      'Versão de banco não suportada. Atualize o Nexo.',
-    );
-    this.db.prepare('INSERT OR IGNORE INTO meta VALUES(?,?)').run('schema', '1');
-    // Recover a committed outbox before importing files changed by Git.
-    this.exportEvents();
-    this.sync();
-    if (!this.db.prepare('SELECT value FROM meta WHERE key=?').get('frontier')) {
-      const events = this.events(),
-        frontier = new Set(events.map((e) => e.id));
-      for (const e of events) for (const p of e.parents) frontier.delete(p);
-      this.db
-        .prepare('INSERT INTO meta VALUES(?,?)')
-        .run('frontier', JSON.stringify([...frontier].sort()));
+    this.releaseWriter = acquireWriter(root);
+    try {
+      this.db = new DatabaseSync(path.join(this.dir, 'state.sqlite'), { timeout: 5000 });
+      this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
+      this.db.exec(schema);
+      const version = this.db.prepare('SELECT value FROM meta WHERE key=?').get('schema');
+      assert(
+        !version || version.value === '1',
+        'SCHEMA_VERSION',
+        'Versão de banco não suportada. Atualize o Nexo.',
+      );
+      this.db.prepare('INSERT OR IGNORE INTO meta VALUES(?,?)').run('schema', '1');
+      this.snapshots = new Snapshots(path.join(root, '.nexo', 'project.sqlite'), () =>
+        this.stageSnapshot(),
+      );
+      // Recover a committed outbox before importing files changed by Git.
+      this.exportEvents();
+      this.sync();
+      if (!this.db.prepare('SELECT value FROM meta WHERE key=?').get('frontier')) {
+        const events = this.events(),
+          frontier = new Set(events.map((e) => e.id));
+        for (const e of events) for (const p of e.parents) frontier.delete(p);
+        this.db
+          .prepare('INSERT INTO meta VALUES(?,?)')
+          .run('frontier', JSON.stringify([...frontier].sort()));
+      }
+    } catch (e) {
+      try {
+        this.db?.close();
+      } finally {
+        this.releaseWriter();
+      }
+      throw e;
     }
   }
   close() {
     if (!this.closed) {
-      this.closed = true;
+      this.snapshots.stop();
       this.db.close();
+      this.closed = true;
+      this.releaseWriter();
     }
   }
   get(id: string): Entity | undefined {
@@ -120,9 +139,10 @@ export class Store {
       throw e;
     }
   }
-  changed() {
+  changed(durable = true) {
     this.revision++;
-    this.onChange();
+    if (durable) this.snapshots.markDirty();
+    this.onChange(durable);
   }
   validate(command: Command): Entity {
     const current = this.get(command.id);
@@ -371,6 +391,7 @@ export class Store {
         'IDEMPOTENCY_MISMATCH',
         'commandId reutilizado com outro conteúdo',
       );
+      this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
     }
     const result = this.transaction(() => {
@@ -449,8 +470,8 @@ export class Store {
       }
       return { entity, eventId: event.id, duplicate: false };
     });
-    this.exportEvents();
     this.changed();
+    this.exportEvents();
     return result;
   }
   exportEvents() {
@@ -473,6 +494,9 @@ export class Store {
     if (wrote) this.directoryStamp = String(fs.statSync(this.eventsDir).mtimeMs);
   }
   sync(force = true) {
+    // A committed outbox must be recovered before Git reconciliation. Otherwise a
+    // failed export could be mistaken for a deliberate branch-event removal.
+    this.exportEvents();
     const directoryStamp = String(fs.statSync(this.eventsDir).mtimeMs);
     if (!force && directoryStamp === this.directoryStamp) return false;
     const existing = new Map(this.events().map((e) => [e.id, e]));
@@ -579,7 +603,6 @@ export class Store {
         .prepare('INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
         .run('frontier', JSON.stringify([...frontier].sort()));
     });
-    this.snapshot();
     this.changed();
     return true;
   }
@@ -603,8 +626,6 @@ export class Store {
       JSON.stringify([...new Set([...previous, ...eventIds])].sort(), null, 2) + '\n',
     );
     this.readResolutions();
-    this.snapshot();
-    this.changed();
   }
   readResolutions() {
     const file = path.join(this.root, '.nexo', 'resolutions.json');
@@ -616,18 +637,34 @@ export class Store {
         'INVALID_RESOLUTION',
         'Resoluções inválidas',
       );
+      const previous = this.db
+        .prepare('SELECT event_id FROM resolutions ORDER BY event_id')
+        .all()
+        .map((r) => r.event_id);
+      const next = [...new Set(ids)].sort();
+      if (JSON.stringify(previous) === JSON.stringify(next)) return;
       this.transaction(() => {
         this.db.exec('DELETE FROM resolutions');
         for (const id of ids)
           this.db.prepare('INSERT OR IGNORE INTO resolutions VALUES(?)').run(id);
       });
+      this.changed();
     }
   }
   snapshot() {
-    const file = path.join(this.root, '.nexo', 'project.sqlite'),
-      temp = path.join(this.dir, 'snapshot-' + crypto.randomUUID() + '.sqlite');
+    return this.snapshots.flush();
+  }
+  private stageSnapshot() {
+    this.exportEvents();
+    const temp = path.join(this.dir, 'snapshot-v2-' + crypto.randomUUID() + '.sqlite');
     const target = new DatabaseSync(temp);
+    let reading = false;
     try {
+      // Hold one consistent read view across all copied tables, even if a legacy
+      // process that predates the ownership mutex is still attached to SQLite.
+      this.db.exec('BEGIN');
+      reading = true;
+      target.exec('PRAGMA synchronous=FULL;');
       target.exec(schema);
       target.exec('BEGIN');
       target.prepare('INSERT INTO meta VALUES(?,?)').run('schema', '1');
@@ -648,11 +685,36 @@ export class Store {
       for (const c of this.db.prepare('SELECT * FROM resolutions').all())
         target.prepare('INSERT INTO resolutions VALUES(?)').run(c.event_id);
       target.exec('COMMIT;PRAGMA optimize;');
-    } finally {
+      assert(
+        target.prepare('PRAGMA quick_check').get()?.quick_check === 'ok',
+        'SNAPSHOT_INVALID',
+        'Snapshot integrity check failed',
+      );
+    } catch (e) {
       target.close();
+      try {
+        fs.rmSync(temp, { force: true });
+      } catch {}
+      throw e;
+    } finally {
+      if (reading) this.db.exec('ROLLBACK');
     }
+    target.close();
     // Closed, standalone SQLite file. No WAL, leases, credentials or machine paths are copied.
-    fs.renameSync(temp, file);
+    try {
+      const fd = fs.openSync(temp, 'r+');
+      try {
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+      return temp;
+    } catch (e) {
+      try {
+        fs.rmSync(temp, { force: true });
+      } catch {}
+      throw e;
+    }
   }
   agents(): Agent[] {
     const now = Date.now();
@@ -808,7 +870,7 @@ export class Store {
       this.release(agent.token);
       throw e;
     }
-    this.changed();
+    this.changed(false);
     return agent;
   }
   heartbeat(token: string, activity?: string) {
@@ -820,13 +882,13 @@ export class Store {
       this.db
         .prepare('UPDATE agents SET data=?,expires_at=? WHERE token=?')
         .run(JSON.stringify(agent), agent.expiresAt, token);
-      this.changed();
+      this.changed(false);
       return agent;
     });
   }
   release(token: string) {
     this.db.prepare('DELETE FROM agents WHERE token=?').run(token);
-    this.changed();
+    this.changed(false);
     return { released: true };
   }
   releaseSession(sessionId: string) {

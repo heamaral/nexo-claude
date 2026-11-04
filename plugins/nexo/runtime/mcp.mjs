@@ -3262,8 +3262,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path3) {
-      let input2 = path3;
+    function removeDotSegments(path5) {
+      let input2 = path5;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -3337,11 +3337,11 @@ var require_utils = __commonJS({
       }
       return output2.join("");
     }
-    function removeDotSegmentsRelative(path3) {
-      if (path3 === "" || path3[0] === "/") {
-        return removeDotSegments(path3);
+    function removeDotSegmentsRelative(path5) {
+      if (path5 === "" || path5[0] === "/") {
+        return removeDotSegments(path5);
       }
-      const segments = path3.split("/");
+      const segments = path5.split("/");
       const last = segments.length - 1;
       const output2 = [];
       let trailingDirectory = false;
@@ -3704,8 +3704,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path3 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
+        const path5 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7242,12 +7242,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs3, exportName) {
+    function addFormats(ajv, list, fs6, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs3[f]);
+        ajv.addFormat(f, fs6[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7629,8 +7629,8 @@ function getErrorMap() {
 
 // node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path3, errorMaps, issueData } = params;
-  const fullPath = [...path3, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7745,11 +7745,11 @@ var errorUtil;
 
 // node_modules/.pnpm/zod@4.6.7/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path3, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path3;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -11704,10 +11704,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -12047,11 +12047,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -12513,16 +12513,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path3 = []) => {
+  const processError = (error63, path5 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -12561,17 +12561,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path3 = []) => {
+  const processError = (error63, path5 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -12610,8 +12610,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -28162,11 +28162,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path3) {
-  if (path3.length === 0) {
+function getDotPath(path5) {
+  if (path5.length === 0) {
     return "object root";
   }
-  return path3.reduce((acc, seg, index) => {
+  return path5.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -30393,13 +30393,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1] === void 0 ? void 0 : decodeJSONPointerSegment(path3[1]);
+  if (path5[0] === defsKey) {
+    const key = path5[1] === void 0 ? void 0 : decodeJSONPointerSegment(path5[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -36655,7 +36655,7 @@ var StdioServerTransport = class {
 };
 
 // src/project.ts
-import fs from "node:fs";
+import fs2 from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -36758,6 +36758,18 @@ function assert2(ok, code, message, status = 409) {
   if (!ok) throw new NexoError(code, message, status);
 }
 
+// src/files.ts
+import fs from "node:fs";
+function syncDirectory(dir) {
+  if (process.platform === "win32") return;
+  const fd = fs.openSync(dir, "r");
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 // src/project.ts
 var configSchema = external_exports.object({
   schemaVersion: external_exports.literal(1),
@@ -36767,26 +36779,30 @@ var configSchema = external_exports.object({
   maxTeamsPerDelivery: external_exports.number().int().min(1).max(32)
 }).strict();
 function atomicWrite(file2, data, mode = 384) {
-  fs.mkdirSync(path.dirname(file2), { recursive: true });
+  fs2.mkdirSync(path.dirname(file2), { recursive: true });
   const temp = file2 + "." + crypto.randomUUID() + ".tmp";
-  const fd = fs.openSync(temp, "wx", mode);
   try {
-    fs.writeFileSync(fd, data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-  try {
-    fs.renameSync(temp, file2);
+    const fd = fs2.openSync(temp, "wx", mode);
+    try {
+      fs2.writeFileSync(fd, data);
+      fs2.fsyncSync(fd);
+    } finally {
+      fs2.closeSync(fd);
+    }
+    fs2.renameSync(temp, file2);
+    syncDirectory(path.dirname(file2));
   } catch (e) {
-    fs.rmSync(temp, { force: true });
+    try {
+      fs2.rmSync(temp, { force: true });
+    } catch {
+    }
     throw e;
   }
 }
 function findProject(cwd = process.cwd()) {
-  let current = fs.realpathSync.native(cwd);
+  let current = fs2.realpathSync.native(cwd);
   for (; ; ) {
-    if (fs.existsSync(path.join(current, ".nexo", "project.json"))) return current;
+    if (fs2.existsSync(path.join(current, ".nexo", "project.json"))) return current;
     const up = path.dirname(current);
     if (up === current) break;
     current = up;
@@ -36796,15 +36812,15 @@ function findProject(cwd = process.cwd()) {
 function loadConfig(root2) {
   const dir = path.join(root2, ".nexo");
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     ".nexo n\xE3o pode ser um link simb\xF3lico",
     400
   );
-  return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, "project.json"), "utf8")));
+  return configSchema.parse(JSON.parse(fs2.readFileSync(path.join(dir, "project.json"), "utf8")));
 }
 function initialize(cwd = process.cwd(), name, options = {}) {
-  let root2 = fs.realpathSync.native(cwd);
+  let root2 = fs2.realpathSync.native(cwd);
   if (!options.exact)
     try {
       root2 = execFileSync("git", ["-C", root2, "rev-parse", "--show-toplevel"], {
@@ -36814,13 +36830,13 @@ function initialize(cwd = process.cwd(), name, options = {}) {
       }).trim();
     } catch {
     }
-  root2 = fs.realpathSync.native(root2);
+  root2 = fs2.realpathSync.native(root2);
   const dir = path.join(root2, ".nexo");
-  if (fs.existsSync(path.join(dir, "project.json")))
+  if (fs2.existsSync(path.join(dir, "project.json")))
     return { root: root2, config: loadConfig(root2), created: false };
-  fs.mkdirSync(dir, { recursive: true });
+  fs2.mkdirSync(dir, { recursive: true });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     ".nexo n\xE3o pode ser um link simb\xF3lico",
     400
@@ -36832,28 +36848,28 @@ function initialize(cwd = process.cwd(), name, options = {}) {
     maxAgents: 8,
     maxTeamsPerDelivery: 3
   };
-  const fd = fs.openSync(path.join(dir, "project.json"), "wx");
+  const fd = fs2.openSync(path.join(dir, "project.json"), "wx");
   try {
-    fs.writeFileSync(fd, JSON.stringify(config2, null, 2) + "\n");
-    fs.fsyncSync(fd);
+    fs2.writeFileSync(fd, JSON.stringify(config2, null, 2) + "\n");
+    fs2.fsyncSync(fd);
   } finally {
-    fs.closeSync(fd);
+    fs2.closeSync(fd);
   }
-  if (!fs.existsSync(path.join(dir, ".gitignore")))
+  if (!fs2.existsSync(path.join(dir, ".gitignore")))
     atomicWrite(path.join(dir, ".gitignore"), "local/\n*.tmp\n");
   atomicWrite(
     path.join(dir, ".gitattributes"),
     "project.sqlite binary\nevents/*.json text eol=lf\n"
   );
-  fs.mkdirSync(path.join(dir, "events"), { recursive: true });
+  fs2.mkdirSync(path.join(dir, "events"), { recursive: true });
   const command = path.join(root2, ".claude", "commands", "board.md");
-  if (!fs.existsSync(command))
+  if (!fs2.existsSync(command))
     atomicWrite(
       command,
       "---\ndescription: Open the live Nexo board for this project\n---\nInvoke the `nexo:board` skill for the current project. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
     );
   const rule = path.join(root2, ".claude", "rules", "nexo.md");
-  if (!fs.existsSync(rule))
+  if (!fs2.existsSync(rule))
     atomicWrite(
       rule,
       "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Read Nexo MCP state before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
@@ -36862,9 +36878,9 @@ function initialize(cwd = process.cwd(), name, options = {}) {
 }
 function localDir(root2) {
   const dir = path.join(root2, ".nexo", "local");
-  fs.mkdirSync(dir, { recursive: true, mode: 448 });
+  fs2.mkdirSync(dir, { recursive: true, mode: 448 });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     "local n\xE3o pode ser link simb\xF3lico",
     400
@@ -36873,13 +36889,13 @@ function localDir(root2) {
 }
 
 // src/client.ts
-import fs2 from "node:fs";
-import path2 from "node:path";
+import fs5 from "node:fs";
+import path4 from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // src/version.ts
-var VERSION = "1.0.0-rc.2";
+var VERSION = "1.0.0-rc.3";
 function compareVersions(a, b) {
   const parse3 = (s) => {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
@@ -36905,48 +36921,182 @@ function compareVersions(a, b) {
   return 0;
 }
 
+// src/locks.ts
+import fs3 from "node:fs";
+import path2 from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import crypto2 from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
+function tryLock(root2, name) {
+  const file2 = path2.join(localDir(root2), name + ".sqlite");
+  if (fs3.existsSync(file2))
+    assert2(!fs3.lstatSync(file2).isSymbolicLink(), "UNSAFE_PATH", "Lock cannot be a symlink");
+  const db = new DatabaseSync(file2, { timeout: 0 });
+  try {
+    db.exec("BEGIN IMMEDIATE");
+  } catch (e) {
+    db.close();
+    const code = Number(e.errcode) & 255;
+    if (code === 5 || code === 6) return;
+    throw e;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    try {
+      db.exec("ROLLBACK");
+    } finally {
+      db.close();
+    }
+  };
+}
+async function acquireStartup(root2) {
+  const deadline = Date.now() + 3e4;
+  let release;
+  while (!(release = tryLock(root2, "startup"))) {
+    if (Date.now() >= deadline)
+      throw new NexoError(
+        "STARTUP_BUSY",
+        "Another client is starting or upgrading Nexo. No live lock was stolen.",
+        503
+      );
+    await delay(100);
+  }
+  const dir = path2.join(localDir(root2), "startup.lock");
+  const file2 = path2.join(dir, "owner.json");
+  const instance = crypto2.randomUUID();
+  let timer;
+  let owned = false;
+  try {
+    for (; ; ) {
+      try {
+        fs3.mkdirSync(dir);
+        owned = true;
+        break;
+      } catch (e) {
+        if (e.code !== "EEXIST") throw e;
+      }
+      assert2(
+        !fs3.lstatSync(dir).isSymbolicLink(),
+        "UNSAFE_PATH",
+        "Startup guard cannot be a symlink"
+      );
+      try {
+        const owner = JSON.parse(fs3.readFileSync(file2, "utf8"));
+        if (owner.protocol === 2 && owner.root === root2) {
+          fs3.rmSync(file2);
+          fs3.rmdirSync(dir);
+          continue;
+        }
+      } catch (e) {
+        if (!["ENOENT", "ENOTEMPTY"].includes(e.code ?? "")) throw e;
+      }
+      if (Date.now() >= deadline)
+        throw new NexoError(
+          "LEGACY_STARTUP_BUSY",
+          "A legacy Nexo startup lock has no verified owner. Finish/reload that client; it was not removed by age.",
+          503
+        );
+      await delay(100);
+    }
+    fs3.writeFileSync(file2, JSON.stringify({ protocol: 2, root: root2, instance, pid: process.pid }), {
+      flag: "wx",
+      mode: 384
+    });
+    timer = setInterval(() => {
+      try {
+        const now = /* @__PURE__ */ new Date();
+        fs3.utimesSync(dir, now, now);
+      } catch {
+      }
+    }, 5e3);
+    timer.unref();
+    return () => {
+      clearInterval(timer);
+      try {
+        if (JSON.parse(fs3.readFileSync(file2, "utf8")).instance === instance) {
+          fs3.rmSync(file2);
+          fs3.rmdirSync(dir);
+        }
+      } catch {
+      }
+      release();
+    };
+  } catch (e) {
+    if (owned) {
+      try {
+        fs3.rmSync(file2, { force: true });
+        fs3.rmdirSync(dir);
+      } catch {
+      }
+    }
+    release();
+    throw e;
+  }
+}
+
+// src/registry.ts
+import fs4 from "node:fs";
+import path3 from "node:path";
+function readRegistry(root2) {
+  let raw;
+  try {
+    raw = fs4.readFileSync(path3.join(localDir(root2), "server.json"), "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") return;
+    throw e;
+  }
+  const r = JSON.parse(raw);
+  assert2(
+    r.root === root2 && r.version === 1 && Number.isInteger(r.pid) && r.pid > 0 && Number.isInteger(r.port) && r.port > 0 && r.port <= 65535 && typeof r.instance === "string" && typeof r.token === "string",
+    "REGISTRY_INVALID",
+    "Nexo registry identity is invalid; no second writer was started.",
+    503
+  );
+  return r;
+}
+async function probeRegistry(r) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${r.port}/api/health`, {
+      headers: { Connection: "close" },
+      signal: AbortSignal.timeout(1e3)
+    });
+    const health = await response.json();
+    if (response.ok && health.instance === r.instance && typeof health.version === "string")
+      return { ...r, runtimeVersion: health.version, draining: health.draining === true };
+  } catch {
+  }
+}
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code !== "ESRCH";
+  }
+}
+
 // src/client.ts
 var wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function ensureServer(root2 = findProject()) {
-  root2 = fs2.realpathSync.native(root2);
-  const dir = localDir(root2), file2 = path2.join(dir, "server.json"), lock = path2.join(dir, "startup.lock");
+  root2 = fs5.realpathSync.native(root2);
+  const dir = localDir(root2), file2 = path4.join(dir, "server.json");
   const existing = async () => {
-    try {
-      const r = JSON.parse(fs2.readFileSync(file2, "utf8"));
-      if (r.root !== root2 || !Number.isInteger(r.port) || r.port < 1 || r.port > 65535 || r.version !== 1)
-        return;
-      const response = await fetch(`http://127.0.0.1:${r.port}/api/health`, {
-        signal: AbortSignal.timeout(700)
-      });
-      const health = await response.json();
-      if (health.instance === r.instance && typeof health.version === "string")
-        return { ...r, runtimeVersion: health.version };
-    } catch {
-    }
+    const r = readRegistry(root2);
+    return r ? probeRegistry(r) : void 0;
   };
   const running = await existing();
-  const reusable = (r) => !!r?.runtimeVersion && compareVersions(r.runtimeVersion, VERSION) >= 0;
+  const reusable = (r) => !!r?.runtimeVersion && !r.draining && compareVersions(r.runtimeVersion, VERSION) >= 0;
   if (reusable(running)) return running;
-  try {
-    fs2.mkdirSync(lock);
-  } catch {
-    for (let attempt = 0; attempt < 120; attempt++) {
-      if (!fs2.existsSync(lock)) return ensureServer(root2);
-      await wait(250);
-    }
-    if (fs2.existsSync(lock) && Date.now() - fs2.statSync(lock).mtimeMs > 3e4) {
-      fs2.rmdirSync(lock);
-      return ensureServer(root2);
-    }
-    throw new Error("Servi\xE7o est\xE1 iniciando. Tente novamente em alguns segundos.");
-  }
+  const releaseStartup = await acquireStartup(root2);
   try {
     const r = await existing();
     if (reusable(r)) return r;
     if (r) {
       const response = await fetch(`http://127.0.0.1:${r.port}/api/shutdown`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${r.token}` },
+        headers: { Authorization: `Bearer ${r.token}`, Connection: "close" },
         body: "{}",
         signal: AbortSignal.timeout(15e3)
       });
@@ -36955,44 +37105,38 @@ async function ensureServer(root2 = findProject()) {
           "Nexo could not gracefully upgrade the board service. Retry after the current session completes."
         );
       await response.text();
-      for (let i = 0; i < 300; i++) {
+      for (let i = 0; i < 500; i++) {
         try {
-          if (JSON.parse(fs2.readFileSync(file2, "utf8")).instance !== r.instance) break;
+          if (JSON.parse(fs5.readFileSync(file2, "utf8")).instance !== r.instance) break;
         } catch (e) {
           if (e.code === "ENOENT") break;
           throw e;
         }
         await wait(50);
       }
-      if (fs2.existsSync(file2) && JSON.parse(fs2.readFileSync(file2, "utf8")).instance === r.instance)
+      if (fs5.existsSync(file2) && JSON.parse(fs5.readFileSync(file2, "utf8")).instance === r.instance)
         throw new Error(
           "Nexo is still closing its previous board service. Retry shortly; no second writer was started."
         );
     }
-    try {
-      const previous = JSON.parse(fs2.readFileSync(file2, "utf8"));
-      if (previous.root === root2 && Number.isInteger(previous.pid)) {
-        let alive = false;
-        try {
-          process.kill(previous.pid, 0);
-          alive = true;
-        } catch (e) {
-          alive = e.code === "EPERM";
-        }
-        if (alive)
-          throw new Error(
-            "O processo do board ainda existe, mas n\xE3o responde. Consulte .nexo/local/server.log antes de reinici\xE1-lo; Nexo n\xE3o inicia um segundo escritor."
-          );
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message.startsWith("O processo")) throw e;
-    }
-    const log = fs2.openSync(path2.join(dir, "server.log"), "a");
+    const previous = readRegistry(root2);
+    if (previous?.writerProtocol === 2) {
+      const release = tryLock(root2, "writer");
+      if (!release)
+        throw new Error(
+          "The directory writer is still alive but not responding. Nexo will not start a second writer."
+        );
+      release();
+    } else if (previous && processAlive(previous.pid))
+      throw new Error(
+        "O processo do board ainda existe, mas n\xE3o responde. Consulte .nexo/local/server.log; Nexo n\xE3o inicia um segundo escritor."
+      );
+    const log = fs5.openSync(path4.join(dir, "server.log"), "a");
     const child = spawn(
       process.execPath,
       [
         "--disable-warning=ExperimentalWarning",
-        path2.join(path2.dirname(fileURLToPath(import.meta.url)), "cli.mjs"),
+        path4.join(path4.dirname(fileURLToPath(import.meta.url)), "cli.mjs"),
         "serve",
         "--project",
         root2
@@ -37004,7 +37148,7 @@ async function ensureServer(root2 = findProject()) {
       spawnError = e;
     });
     child.unref();
-    fs2.closeSync(log);
+    fs5.closeSync(log);
     for (let attempt = 0; attempt < 60; attempt++) {
       if (spawnError) throw spawnError;
       const value = await existing();
@@ -37013,13 +37157,10 @@ async function ensureServer(root2 = findProject()) {
     }
     throw new Error("O board n\xE3o iniciou. Consulte .nexo/local/server.log e /nexo:doctor.");
   } finally {
-    try {
-      fs2.rmdirSync(lock);
-    } catch {
-    }
+    releaseStartup();
   }
 }
-async function request(route, body, root2) {
+async function request(route, body, root2, retried = false) {
   const r = await ensureServer(root2);
   const response = await fetch(`http://127.0.0.1:${r.port}/api/${route}`, {
     method: body === void 0 ? "GET" : "POST",
@@ -37028,6 +37169,10 @@ async function request(route, body, root2) {
     signal: AbortSignal.timeout(2e4)
   });
   const result = await response.json();
+  if (!response.ok && result.error === "SERVER_DRAINING" && !retried) {
+    await wait(100);
+    return request(route, body, root2, true);
+  }
   if (!response.ok) throw new Error(`${result.error}: ${result.message}`);
   return result;
 }
@@ -37150,7 +37295,7 @@ server.registerTool(
 server.registerTool(
   "snapshot",
   {
-    description: "Flush a closed standalone SQLite snapshot before a Git commit. JSON events remain the merge/rebuild source. Never commit .nexo/local.",
+    description: "Flush a closed standalone SQLite snapshot through the durable generation visible at invocation before a Git commit. Concurrent requests share a publisher; transient file-sharing errors retry with a deadline. Failure preserves the live SQLite/outbox and last complete snapshot; inspect state.snapshot and retry before committing. Quiesce project changes for a commit that requires the latest generation. JSON events remain the merge/rebuild source. Never commit .nexo/local.",
     inputSchema: {},
     annotations: { readOnlyHint: false, idempotentHint: true }
   },

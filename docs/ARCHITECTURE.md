@@ -13,7 +13,7 @@ O plugin instalado não contém dados de projeto. Seu runtime empacotado pode se
 3. Uma transação SQLite grava o novo estado e o evento em uma outbox. Constraints e `BEGIN IMMEDIATE` serializam claims.
 4. O evento é exportado para um arquivo novo com escrita temporária, fsync e rename. O comando só retorna depois da exportação; uma queda antes dela é recuperada pela outbox no reinício.
 5. O serviço notifica os clientes por SSE. O browser busca o snapshot atual completo; a reconexão faz o mesmo, inclusive após reinício da instância.
-6. O SQLite de distribuição é reconstruído em arquivo separado, fechado e renomeado sobre `project.sqlite`, com debounce de 500 ms. O comando `snapshot` faz flush explícito.
+6. Uma fila por diretório reconstrói o SQLite de distribuição em arquivo separado, fecha e valida o arquivo e o renomeia sobre `project.sqlite`. Alterações duráveis usam debounce de 500 ms, com espera máxima de 5 s para iniciar uma tentativa; heartbeat/release não geram snapshots. O comando `snapshot` aguarda publicação até a geração visível em sua chamada. Bloqueios de substituição têm retry assíncrono limitado e retomada automática; não tornam o banco ativo insalubre. Consulte [os detalhes operacionais](CONCURRENCY.md).
 
 As tabelas de runtime não são copiadas para o snapshot. O schema do snapshot inclui tabelas vazias de agentes para permitir inspeção consistente, mas não inclui tokens, claims ou PIDs. O live SQLite em `local/` usa WAL e synchronous FULL. Nenhum arquivo WAL é commitado.
 
@@ -35,7 +35,7 @@ Se apenas o snapshot binário está em conflito, ele pode ser substituído pelo 
 
 ## Serviço e worktrees
 
-O processo liga apenas em `127.0.0.1` numa porta disponível. O registro contém PID, instância aleatória, diretório e token. O cliente verifica a identidade por healthcheck; a criação usa lock de inicialização e processo detached com janela oculta no Windows. Ele permanece disponível após a sessão Claude para manter o board aberto.
+O processo liga apenas em `127.0.0.1` numa porta disponível. O registro contém PID, instância aleatória, diretório e token. O cliente verifica a identidade por healthcheck; a criação usa mutex de startup e processo detached com janela oculta no Windows. Cada Store mantém um segundo mutex de escritor por toda a vida, inclusive em um `serve` iniciado diretamente. Os mutexes usam locks de SQLite em arquivos permanentes ignorados pelo Git; a morte do processo libera o lock e nenhum timeout toma o lugar de um dono vivo. Não remova esses arquivos. Durante upgrades, o cliente faz shutdown autenticado do daemon daquele diretório, sem downgrade ou encerramento por PID. Ele permanece disponível após a sessão Claude para manter o board aberto.
 
 Por padrão, cada checkout tem seu serviço e visão de branch. Isso evita misturar planos de branches diferentes. Para times de uma mesma entrega trabalharem em outros worktrees com **um único board coordenador**, configure `NEXO_PROJECT_ROOT=<checkout-coordenador>` e `NEXO_WORKSPACE=<worktree-do-time>` no processo Claude. O helper `run` faz isso. A raiz coordenadora recebe os eventos; o time escreve no worktree. A integração dos commits continua sendo uma etapa explícita.
 

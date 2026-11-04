@@ -7,7 +7,7 @@
       "name": "nexo",
       "source": "./plugins/nexo",
       "description": "Kanban local, planejamento hierárquico e coordenação de agentes por projeto",
-      "version": "1.0.0-rc.2"
+      "version": "1.0.0-rc.3"
     }
   ]
 }

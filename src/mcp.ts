@@ -112,7 +112,7 @@ server.registerTool(
   'snapshot',
   {
     description:
-      'Flush a closed standalone SQLite snapshot before a Git commit. JSON events remain the merge/rebuild source. Never commit .nexo/local.',
+      'Flush a closed standalone SQLite snapshot through the durable generation visible at invocation before a Git commit. Concurrent requests share a publisher; transient file-sharing errors retry with a deadline. Failure preserves the live SQLite/outbox and last complete snapshot; inspect state.snapshot and retry before committing. Quiesce project changes for a commit that requires the latest generation. JSON events remain the merge/rebuild source. Never commit .nexo/local.',
     inputSchema: {},
     annotations: { readOnlyHint: false, idempotentHint: true },
   },

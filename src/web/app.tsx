@@ -61,6 +61,7 @@ type State = {
   revision: number;
   eventCount: number;
   healthError?: string;
+  snapshot?: { status: string; dirty: boolean; lastError: { code: string } | null };
   conflicts: any[];
 };
 type Detail = { type: 'entity' | 'flow' | 'policy'; id: string };
@@ -504,6 +505,19 @@ function App() {
                   {error ||
                     state?.healthError ||
                     `${state?.conflicts.length} evento(s) divergente(s). Execute /nexo:doctor para revisar antes de continuar.`}
+                </p>
+              </div>
+            </div>
+          )}
+          {state?.snapshot?.lastError && (
+            <div className="snapshot-warning" role="status">
+              <Database />
+              <div>
+                <strong>Snapshot aguardando publicação</strong>
+                <p>
+                  Os cards e agentes continuam salvos no banco local. O Nexo tentará publicar o
+                  arquivo novamente. Antes de um commit, execute snapshot e aguarde a confirmação.
+                  Código: {state.snapshot.lastError.code}.
                 </p>
               </div>
             </div>
