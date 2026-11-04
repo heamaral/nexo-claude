@@ -2,63 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { atomicWrite, findProject, localDir } from './project.js';
+import { findProject, localDir } from './project.js';
 import { VERSION, compareVersions } from './version.js';
-type Registry = {
-  version: number;
-  pid: number;
-  instance: string;
-  port: number;
-  token: string;
-  root: string;
-  runtimeVersion?: string;
-};
+import { acquireStartup, tryLock } from './locks.js';
+import { Registry, readRegistry, probeRegistry, processAlive } from './registry.js';
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function ensureServer(root = findProject()): Promise<Registry> {
   root = fs.realpathSync.native(root);
   const dir = localDir(root),
-    file = path.join(dir, 'server.json'),
-    lock = path.join(dir, 'startup.lock');
+    file = path.join(dir, 'server.json');
   const existing = async () => {
-    try {
-      const r = JSON.parse(fs.readFileSync(file, 'utf8')) as Registry;
-      if (
-        r.root !== root ||
-        !Number.isInteger(r.port) ||
-        r.port < 1 ||
-        r.port > 65535 ||
-        r.version !== 1
-      )
-        return;
-      const response = await fetch(`http://127.0.0.1:${r.port}/api/health`, {
-        signal: AbortSignal.timeout(700),
-      });
-      const health = (await response.json()) as any;
-      if (health.instance === r.instance && typeof health.version === 'string')
-        return { ...r, runtimeVersion: health.version };
-    } catch {}
+    const r = readRegistry(root);
+    return r ? probeRegistry(r) : undefined;
   };
   const running = await existing();
   const reusable = (r: Registry | undefined) =>
-    !!r?.runtimeVersion && compareVersions(r.runtimeVersion, VERSION) >= 0;
+    !!r?.runtimeVersion && !r.draining && compareVersions(r.runtimeVersion, VERSION) >= 0;
   if (reusable(running)) return running!;
-  try {
-    fs.mkdirSync(lock);
-  } catch {
-    for (let attempt = 0; attempt < 120; attempt++) {
-      // Probing health on a waiting client's keep-alive socket can keep the old
-      // server busy indefinitely while its owner is trying to drain it.
-      // Let the lock owner finish the handoff before opening another connection.
-      if (!fs.existsSync(lock)) return ensureServer(root);
-      await wait(250);
-    }
-    // Never kill a PID based only on a stale registry. A stale startup lock can be retried safely.
-    if (fs.existsSync(lock) && Date.now() - fs.statSync(lock).mtimeMs > 30_000) {
-      fs.rmdirSync(lock);
-      return ensureServer(root);
-    }
-    throw new Error('Serviço está iniciando. Tente novamente em alguns segundos.');
-  }
+  const releaseStartup = await acquireStartup(root);
   try {
     const r = await existing();
     if (reusable(r)) return r!;
@@ -67,7 +28,7 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
       // Never kill a PID or downgrade a newer runtime used by another session.
       const response = await fetch(`http://127.0.0.1:${r.port}/api/shutdown`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${r.token}` },
+        headers: { Authorization: `Bearer ${r.token}`, Connection: 'close' },
         body: '{}',
         signal: AbortSignal.timeout(15000),
       });
@@ -76,7 +37,7 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
           'Nexo could not gracefully upgrade the board service. Retry after the current session completes.',
         );
       await response.text();
-      for (let i = 0; i < 300; i++) {
+      for (let i = 0; i < 500; i++) {
         try {
           if (JSON.parse(fs.readFileSync(file, 'utf8')).instance !== r.instance) break;
         } catch (e) {
@@ -90,24 +51,18 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
           'Nexo is still closing its previous board service. Retry shortly; no second writer was started.',
         );
     }
-    try {
-      const previous = JSON.parse(fs.readFileSync(file, 'utf8')) as Registry;
-      if (previous.root === root && Number.isInteger(previous.pid)) {
-        let alive = false;
-        try {
-          process.kill(previous.pid, 0);
-          alive = true;
-        } catch (e) {
-          alive = (e as NodeJS.ErrnoException).code === 'EPERM';
-        }
-        if (alive)
-          throw new Error(
-            'O processo do board ainda existe, mas não responde. Consulte .nexo/local/server.log antes de reiniciá-lo; Nexo não inicia um segundo escritor.',
-          );
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message.startsWith('O processo')) throw e;
-    }
+    const previous = readRegistry(root);
+    if (previous?.writerProtocol === 2) {
+      const release = tryLock(root, 'writer');
+      if (!release)
+        throw new Error(
+          'The directory writer is still alive but not responding. Nexo will not start a second writer.',
+        );
+      release();
+    } else if (previous && processAlive(previous.pid))
+      throw new Error(
+        'O processo do board ainda existe, mas não responde. Consulte .nexo/local/server.log; Nexo não inicia um segundo escritor.',
+      );
     const log = fs.openSync(path.join(dir, 'server.log'), 'a');
     const child = spawn(
       process.execPath,
@@ -134,12 +89,15 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
     }
     throw new Error('O board não iniciou. Consulte .nexo/local/server.log e /nexo:doctor.');
   } finally {
-    try {
-      fs.rmdirSync(lock);
-    } catch {}
+    releaseStartup();
   }
 }
-export async function request(route: string, body?: unknown, root?: string) {
+export async function request(
+  route: string,
+  body?: unknown,
+  root?: string,
+  retried = false,
+): Promise<any> {
   const r = await ensureServer(root);
   const response = await fetch(`http://127.0.0.1:${r.port}/api/${route}`, {
     method: body === undefined ? 'GET' : 'POST',
@@ -148,6 +106,12 @@ export async function request(route: string, body?: unknown, root?: string) {
     signal: AbortSignal.timeout(20_000),
   });
   const result = (await response.json()) as any;
+  // Only retry an explicit rejection before execution. A network failure after
+  // acceptance is ambiguous, particularly for claims, and is never replayed here.
+  if (!response.ok && result.error === 'SERVER_DRAINING' && !retried) {
+    await wait(100);
+    return request(route, body, root, true);
+  }
   if (!response.ok) throw new Error(`${result.error}: ${result.message}`);
   return result;
 }

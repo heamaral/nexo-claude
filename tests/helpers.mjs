@@ -13,8 +13,14 @@ export function fixture() {
     store,
     close() {
       store.close();
-      if (!path.basename(root).startsWith('nexo-test-')) throw new Error('Unsafe cleanup');
-      fs.rmSync(root, { recursive: true, force: true });
+      if (
+        !path.basename(root).startsWith('nexo-test-') ||
+        path.dirname(root) !== fs.realpathSync.native(os.tmpdir())
+      )
+        throw new Error('Unsafe cleanup');
+      // The detached fixture can have closed its registry/database just before
+      // Windows releases its cwd handle. Cleanup waits briefly for process exit.
+      fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     },
   };
 }

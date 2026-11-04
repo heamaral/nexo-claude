@@ -6,7 +6,7 @@
 
 ## Estado da versão
 
-`1.0.0-rc.2` é uma release candidate funcional, com testes automatizados de persistência, concorrência, segurança HTTP, MCP e navegador. O lifecycle nativo com planner/worker e duas sessões em worktrees foi validado. A promoção estável depende do CI nas plataformas suportadas e de um piloto completo de implementação e integração. Não há alegação de suporte ilimitado de escala ou de isolamento de sistema operacional por leases.
+`1.0.0-rc.3` é uma release candidate funcional, com testes automatizados de persistência, concorrência, segurança HTTP, MCP e navegador. A publicação de snapshots agora tem fila, retries limitados e isolamento das reservas dos agentes. O lifecycle nativo com planner/worker e duas sessões em worktrees foi validado. A promoção estável depende do CI nas plataformas suportadas e de um piloto completo de implementação e integração. Não há alegação de suporte ilimitado de escala ou de isolamento de sistema operacional por leases.
 
 ## Instalação
 
@@ -92,7 +92,7 @@ Leases expiram: “sem contato” não significa sucesso. Uma execução antiga 
 
 ## Operação e desenvolvimento
 
-Leia [arquitetura e recuperação](docs/ARCHITECTURE.md), [modelo e API](docs/API.md), [segurança](SECURITY.md) e [gates de lançamento](docs/RELEASE.md).
+Leia [concorrência e snapshots](docs/CONCURRENCY.md), [arquitetura e recuperação](docs/ARCHITECTURE.md), [modelo e API](docs/API.md), [segurança](SECURITY.md) e [gates de lançamento](docs/RELEASE.md).
 
 ```sh
 corepack pnpm install --frozen-lockfile

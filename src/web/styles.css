@@ -1234,6 +1234,29 @@ dialog::backdrop {
 .modal-content > ul li {
   margin: 8px 0;
 }
+.snapshot-warning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+.snapshot-warning > svg {
+  flex-shrink: 0;
+  width: 20px;
+  color: var(--accent);
+}
+.snapshot-warning p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
 .notice {
   padding: 13px;
   border-radius: 8px;

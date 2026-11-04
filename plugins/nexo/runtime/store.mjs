@@ -6,10 +6,10 @@ var __export = (target, all) => {
 };
 
 // src/store.ts
-import fs2 from "node:fs";
-import path2 from "node:path";
+import fs5 from "node:fs";
+import path4 from "node:path";
 import crypto2 from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
 
 // node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -828,10 +828,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema2) {
   return mergeDefs(schema2._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -1171,11 +1171,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -1637,16 +1637,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path3 = []) => {
+  const processError = (error63, path5 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -1685,17 +1685,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path3 = []) => {
+  const processError = (error63, path5 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -1734,8 +1734,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -18873,13 +18873,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1] === void 0 ? void 0 : decodeJSONPointerSegment(path3[1]);
+  if (path5[0] === defsKey) {
+    const key = path5[1] === void 0 ? void 0 : decodeJSONPointerSegment(path5[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -19827,9 +19827,44 @@ function assert2(ok, code, message, status = 409) {
 }
 
 // src/project.ts
+import fs2 from "node:fs";
+import path2 from "node:path";
+import crypto from "node:crypto";
+
+// src/files.ts
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
+function syncDirectory(dir) {
+  if (process.platform === "win32") return;
+  const fd = fs.openSync(dir, "r");
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+async function replaceFile(source, target, onRetry, timeoutMs = 3e3) {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  for (; ; ) {
+    attempt++;
+    try {
+      await fs.promises.rename(source, target);
+      syncDirectory(path.dirname(target));
+      return attempt;
+    } catch (e) {
+      const code = e.code ?? "UNKNOWN";
+      if (!["EPERM", "EACCES", "EBUSY"].includes(code) || Date.now() >= deadline) throw e;
+      onRetry(code, attempt);
+      await delay(
+        Math.min(deadline - Date.now(), 40 * 2 ** Math.min(attempt, 3) + Math.random() * 40)
+      );
+    }
+  }
+}
+
+// src/project.ts
 var configSchema = external_exports.object({
   schemaVersion: external_exports.literal(1),
   id: external_exports.string().uuid(),
@@ -19838,37 +19873,41 @@ var configSchema = external_exports.object({
   maxTeamsPerDelivery: external_exports.number().int().min(1).max(32)
 }).strict();
 function atomicWrite(file2, data, mode = 384) {
-  fs.mkdirSync(path.dirname(file2), { recursive: true });
+  fs2.mkdirSync(path2.dirname(file2), { recursive: true });
   const temp = file2 + "." + crypto.randomUUID() + ".tmp";
-  const fd = fs.openSync(temp, "wx", mode);
   try {
-    fs.writeFileSync(fd, data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-  try {
-    fs.renameSync(temp, file2);
+    const fd = fs2.openSync(temp, "wx", mode);
+    try {
+      fs2.writeFileSync(fd, data);
+      fs2.fsyncSync(fd);
+    } finally {
+      fs2.closeSync(fd);
+    }
+    fs2.renameSync(temp, file2);
+    syncDirectory(path2.dirname(file2));
   } catch (e) {
-    fs.rmSync(temp, { force: true });
+    try {
+      fs2.rmSync(temp, { force: true });
+    } catch {
+    }
     throw e;
   }
 }
 function loadConfig(root) {
-  const dir = path.join(root, ".nexo");
+  const dir = path2.join(root, ".nexo");
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     ".nexo n\xE3o pode ser um link simb\xF3lico",
     400
   );
-  return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, "project.json"), "utf8")));
+  return configSchema.parse(JSON.parse(fs2.readFileSync(path2.join(dir, "project.json"), "utf8")));
 }
 function localDir(root) {
-  const dir = path.join(root, ".nexo", "local");
-  fs.mkdirSync(dir, { recursive: true, mode: 448 });
+  const dir = path2.join(root, ".nexo", "local");
+  fs2.mkdirSync(dir, { recursive: true, mode: 448 });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     "local n\xE3o pode ser link simb\xF3lico",
     400
@@ -19876,16 +19915,213 @@ function localDir(root) {
   return dir;
 }
 function safeEventsDir(root) {
-  const dir = path.join(root, ".nexo", "events");
-  fs.mkdirSync(dir, { recursive: true });
+  const dir = path2.join(root, ".nexo", "events");
+  fs2.mkdirSync(dir, { recursive: true });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     "events n\xE3o pode ser link simb\xF3lico",
     400
   );
   return dir;
 }
+
+// src/locks.ts
+import fs3 from "node:fs";
+import path3 from "node:path";
+import { DatabaseSync } from "node:sqlite";
+function tryLock(root, name) {
+  const file2 = path3.join(localDir(root), name + ".sqlite");
+  if (fs3.existsSync(file2))
+    assert2(!fs3.lstatSync(file2).isSymbolicLink(), "UNSAFE_PATH", "Lock cannot be a symlink");
+  const db = new DatabaseSync(file2, { timeout: 0 });
+  try {
+    db.exec("BEGIN IMMEDIATE");
+  } catch (e) {
+    db.close();
+    const code = Number(e.errcode) & 255;
+    if (code === 5 || code === 6) return;
+    throw e;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    try {
+      db.exec("ROLLBACK");
+    } finally {
+      db.close();
+    }
+  };
+}
+function acquireWriter(root) {
+  const release = tryLock(root, "writer");
+  if (!release)
+    throw new NexoError(
+      "WRITER_BUSY",
+      "Another Nexo writer owns this directory. Use the registered service; a live owner is never replaced by a timeout.",
+      503
+    );
+  return release;
+}
+
+// src/snapshots.ts
+import fs4 from "node:fs";
+var Snapshots = class {
+  constructor(target, stage) {
+    this.target = target;
+    this.stage = stage;
+  }
+  target;
+  stage;
+  generation = 0;
+  publishedGeneration = -1;
+  job;
+  timer;
+  dirtySince = Date.now();
+  automatic = false;
+  failures = 0;
+  stopped = false;
+  artifactStamp = "";
+  info = {
+    status: "pending",
+    dirty: true,
+    generation: 0,
+    publishedGeneration: -1,
+    attempts: 0,
+    publications: 0,
+    lastSuccessAt: null,
+    lastError: null
+  };
+  onChange = () => {
+  };
+  state() {
+    return {
+      ...this.info,
+      generation: this.generation,
+      publishedGeneration: this.publishedGeneration,
+      dirty: this.publishedGeneration < this.generation
+    };
+  }
+  get busy() {
+    return !!this.job;
+  }
+  start() {
+    this.automatic = true;
+    this.schedule(0);
+  }
+  pause() {
+    this.automatic = false;
+    clearTimeout(this.timer);
+  }
+  stamp() {
+    try {
+      const s = fs4.lstatSync(this.target);
+      return s.isFile() ? [s.dev, s.ino, s.size, s.mtimeMs, s.ctimeMs].join(":") : "";
+    } catch {
+      return "";
+    }
+  }
+  verify() {
+    if (!this.job && this.publishedGeneration >= 0 && this.stamp() !== this.artifactStamp) {
+      this.publishedGeneration = -1;
+      this.info.status = "pending";
+      this.schedule(0);
+      this.onChange();
+    }
+  }
+  markDirty() {
+    if (this.publishedGeneration === this.generation) this.dirtySince = Date.now();
+    this.generation++;
+    if (!this.job && !this.info.lastError) this.info.status = "pending";
+    if (this.failures) return;
+    this.schedule(Math.min(500, Math.max(0, 5e3 - (Date.now() - this.dirtySince))));
+  }
+  schedule(ms) {
+    if (!this.automatic || this.stopped) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      void this.flush().catch(() => {
+      });
+    }, ms);
+    this.timer.unref();
+  }
+  async flush(requested = this.generation) {
+    if (this.stopped) throw new Error("Snapshot publisher is closed");
+    this.verify();
+    if (this.publishedGeneration >= requested && !this.job) return;
+    clearTimeout(this.timer);
+    if (!this.job) {
+      const captured = this.generation;
+      this.job = this.publish(captured).finally(() => {
+        this.job = void 0;
+        if (this.publishedGeneration < this.generation)
+          this.schedule(
+            this.failures ? Math.min(3e4, 1e3 * 2 ** Math.min(this.failures - 1, 5)) : 0
+          );
+      });
+    }
+    await this.job;
+    if (this.publishedGeneration < requested) await this.flush(requested);
+  }
+  async publish(captured) {
+    let temp;
+    this.info.status = "publishing";
+    this.info.attempts = 0;
+    this.onChange();
+    try {
+      temp = this.stage();
+      this.info.attempts = await replaceFile(temp, this.target, (code, attempt) => {
+        this.info.status = "retrying";
+        this.info.attempts = attempt;
+        this.info.lastError = {
+          code,
+          message: "Snapshot replacement is waiting for a file handle to be released.",
+          operation: "replace",
+          at: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        this.onChange();
+      });
+      this.artifactStamp = this.stamp();
+      this.publishedGeneration = captured;
+      this.info.status = this.generation === captured ? "ready" : "pending";
+      this.info.lastSuccessAt = (/* @__PURE__ */ new Date()).toISOString();
+      this.info.lastError = null;
+      this.info.publications++;
+      this.failures = 0;
+    } catch (e) {
+      const err = e;
+      this.failures++;
+      this.info.status = "error";
+      this.info.lastError = {
+        code: err.code ?? "SNAPSHOT_FAILED",
+        message: err.message,
+        operation: temp ? "replace" : "stage",
+        at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      const recovery = ["EPERM", "EACCES", "EBUSY"].includes(this.info.lastError.code) ? "Close readers of .nexo/project.sqlite, check file permissions and retry before committing it." : "Inspect snapshot.lastError and filesystem health, then retry before committing it.";
+      throw new NexoError(
+        "SNAPSHOT_PENDING",
+        "The live database and event outbox are preserved. Snapshot publication failed (" + this.info.lastError.code + "). " + recovery,
+        503
+      );
+    } finally {
+      if (temp) {
+        try {
+          await fs4.promises.rm(temp, { force: true });
+        } catch {
+        }
+      }
+      this.onChange();
+    }
+  }
+  /** Called only after in-flight publication has settled, while ownership is held. */
+  stop() {
+    if (this.job) throw new Error("Wait for the snapshot publisher before closing its owner");
+    this.stopped = true;
+    clearTimeout(this.timer);
+  }
+};
 
 // src/store.ts
 var schema = `PRAGMA foreign_keys=ON;
@@ -19917,22 +20153,36 @@ var Store = class {
     this.config = loadConfig(root);
     this.dir = localDir(root);
     this.eventsDir = safeEventsDir(root);
-    this.db = new DatabaseSync(path2.join(this.dir, "state.sqlite"), { timeout: 5e3 });
-    this.db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
-    this.db.exec(schema);
-    const version2 = this.db.prepare("SELECT value FROM meta WHERE key=?").get("schema");
-    assert2(
-      !version2 || version2.value === "1",
-      "SCHEMA_VERSION",
-      "Vers\xE3o de banco n\xE3o suportada. Atualize o Nexo."
-    );
-    this.db.prepare("INSERT OR IGNORE INTO meta VALUES(?,?)").run("schema", "1");
-    this.exportEvents();
-    this.sync();
-    if (!this.db.prepare("SELECT value FROM meta WHERE key=?").get("frontier")) {
-      const events = this.events(), frontier = new Set(events.map((e) => e.id));
-      for (const e of events) for (const p of e.parents) frontier.delete(p);
-      this.db.prepare("INSERT INTO meta VALUES(?,?)").run("frontier", JSON.stringify([...frontier].sort()));
+    this.releaseWriter = acquireWriter(root);
+    try {
+      this.db = new DatabaseSync2(path4.join(this.dir, "state.sqlite"), { timeout: 5e3 });
+      this.db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
+      this.db.exec(schema);
+      const version2 = this.db.prepare("SELECT value FROM meta WHERE key=?").get("schema");
+      assert2(
+        !version2 || version2.value === "1",
+        "SCHEMA_VERSION",
+        "Vers\xE3o de banco n\xE3o suportada. Atualize o Nexo."
+      );
+      this.db.prepare("INSERT OR IGNORE INTO meta VALUES(?,?)").run("schema", "1");
+      this.snapshots = new Snapshots(
+        path4.join(root, ".nexo", "project.sqlite"),
+        () => this.stageSnapshot()
+      );
+      this.exportEvents();
+      this.sync();
+      if (!this.db.prepare("SELECT value FROM meta WHERE key=?").get("frontier")) {
+        const events = this.events(), frontier = new Set(events.map((e) => e.id));
+        for (const e of events) for (const p of e.parents) frontier.delete(p);
+        this.db.prepare("INSERT INTO meta VALUES(?,?)").run("frontier", JSON.stringify([...frontier].sort()));
+      }
+    } catch (e) {
+      try {
+        this.db?.close();
+      } finally {
+        this.releaseWriter();
+      }
+      throw e;
     }
   }
   root;
@@ -19941,15 +20191,19 @@ var Store = class {
   dir;
   eventsDir;
   revision = 0;
-  onChange = () => {
+  onChange = (_durable) => {
   };
+  snapshots;
+  releaseWriter;
   closed = false;
   directoryStamp = "";
   fileCache = /* @__PURE__ */ new Map();
   close() {
     if (!this.closed) {
-      this.closed = true;
+      this.snapshots.stop();
       this.db.close();
+      this.closed = true;
+      this.releaseWriter();
     }
   }
   get(id2) {
@@ -19976,9 +20230,10 @@ var Store = class {
       throw e;
     }
   }
-  changed() {
+  changed(durable = true) {
     this.revision++;
-    this.onChange();
+    if (durable) this.snapshots.markDirty();
+    this.onChange(durable);
   }
   validate(command) {
     const current = this.get(command.id);
@@ -20208,6 +20463,7 @@ var Store = class {
         "IDEMPOTENCY_MISMATCH",
         "commandId reutilizado com outro conte\xFAdo"
       );
+      this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
     }
     const result = this.transaction(() => {
@@ -20275,18 +20531,18 @@ var Store = class {
       }
       return { entity, eventId: event.id, duplicate: false };
     });
-    this.exportEvents();
     this.changed();
+    this.exportEvents();
     return result;
   }
   exportEvents() {
     let wrote = false;
     for (const row of this.db.prepare("SELECT event FROM events WHERE exported=0").all()) {
       const event = JSON.parse(row.event);
-      const name = event.id + ".json", file2 = path2.join(this.eventsDir, name);
-      if (!fs2.existsSync(file2)) {
+      const name = event.id + ".json", file2 = path4.join(this.eventsDir, name);
+      if (!fs5.existsSync(file2)) {
         atomicWrite(file2, JSON.stringify(event, null, 2) + "\n");
-        const stat = fs2.lstatSync(file2);
+        const stat = fs5.lstatSync(file2);
         this.fileCache.set(name, {
           stamp: stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size,
           event
@@ -20295,24 +20551,25 @@ var Store = class {
       this.db.prepare("UPDATE events SET exported=1 WHERE id=?").run(event.id);
       wrote = true;
     }
-    if (wrote) this.directoryStamp = String(fs2.statSync(this.eventsDir).mtimeMs);
+    if (wrote) this.directoryStamp = String(fs5.statSync(this.eventsDir).mtimeMs);
   }
   sync(force = true) {
-    const directoryStamp = String(fs2.statSync(this.eventsDir).mtimeMs);
+    this.exportEvents();
+    const directoryStamp = String(fs5.statSync(this.eventsDir).mtimeMs);
     if (!force && directoryStamp === this.directoryStamp) return false;
     const existing = new Map(this.events().map((e) => [e.id, e]));
     const known = /* @__PURE__ */ new Map();
     let dirty = false;
-    for (const name of fs2.readdirSync(this.eventsDir)) {
+    for (const name of fs5.readdirSync(this.eventsDir)) {
       if (!/^[0-9a-f-]{36}\.json$/.test(name)) continue;
-      const file2 = path2.join(this.eventsDir, name), stat = fs2.lstatSync(file2);
+      const file2 = path4.join(this.eventsDir, name), stat = fs5.lstatSync(file2);
       assert2(
         stat.isFile() && !stat.isSymbolicLink() && stat.size < 1024 * 1024,
         "INVALID_EVENT",
         "Arquivo de evento inv\xE1lido"
       );
       const stamp = stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size, cached2 = this.fileCache.get(name);
-      const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs2.readFileSync(file2, "utf8"));
+      const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs5.readFileSync(file2, "utf8"));
       const { hash: sum, ...body } = event;
       assert2(
         event.id + ".json" === name && event.schema === 1 && event.projectId === this.config.id && Array.isArray(event.parents) && event.parents.every((p) => typeof p === "string") && hash2(body) === sum,
@@ -20380,13 +20637,12 @@ var Store = class {
       for (const e of ordered) for (const p of e.parents) frontier.delete(p);
       this.db.prepare("INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run("frontier", JSON.stringify([...frontier].sort()));
     });
-    this.snapshot();
     this.changed();
     return true;
   }
   resolve(eventIds) {
-    const file2 = path2.join(this.root, ".nexo", "resolutions.json");
-    const previous = fs2.existsSync(file2) ? JSON.parse(fs2.readFileSync(file2, "utf8")) : [];
+    const file2 = path4.join(this.root, ".nexo", "resolutions.json");
+    const previous = fs5.existsSync(file2) ? JSON.parse(fs5.readFileSync(file2, "utf8")) : [];
     const valid = new Set(
       this.db.prepare("SELECT event_id FROM conflicts").all().map((r) => r.event_id)
     );
@@ -20400,29 +20656,39 @@ var Store = class {
       JSON.stringify([.../* @__PURE__ */ new Set([...previous, ...eventIds])].sort(), null, 2) + "\n"
     );
     this.readResolutions();
-    this.snapshot();
-    this.changed();
   }
   readResolutions() {
-    const file2 = path2.join(this.root, ".nexo", "resolutions.json");
-    if (fs2.existsSync(file2)) {
-      const ids = JSON.parse(fs2.readFileSync(file2, "utf8"));
+    const file2 = path4.join(this.root, ".nexo", "resolutions.json");
+    if (fs5.existsSync(file2)) {
+      const ids = JSON.parse(fs5.readFileSync(file2, "utf8"));
       assert2(
         Array.isArray(ids) && ids.every((id2) => typeof id2 === "string" && /^[0-9a-f-]{36}$/.test(id2)),
         "INVALID_RESOLUTION",
         "Resolu\xE7\xF5es inv\xE1lidas"
       );
+      const previous = this.db.prepare("SELECT event_id FROM resolutions ORDER BY event_id").all().map((r) => r.event_id);
+      const next = [...new Set(ids)].sort();
+      if (JSON.stringify(previous) === JSON.stringify(next)) return;
       this.transaction(() => {
         this.db.exec("DELETE FROM resolutions");
         for (const id2 of ids)
           this.db.prepare("INSERT OR IGNORE INTO resolutions VALUES(?)").run(id2);
       });
+      this.changed();
     }
   }
   snapshot() {
-    const file2 = path2.join(this.root, ".nexo", "project.sqlite"), temp = path2.join(this.dir, "snapshot-" + crypto2.randomUUID() + ".sqlite");
-    const target = new DatabaseSync(temp);
+    return this.snapshots.flush();
+  }
+  stageSnapshot() {
+    this.exportEvents();
+    const temp = path4.join(this.dir, "snapshot-v2-" + crypto2.randomUUID() + ".sqlite");
+    const target = new DatabaseSync2(temp);
+    let reading = false;
     try {
+      this.db.exec("BEGIN");
+      reading = true;
+      target.exec("PRAGMA synchronous=FULL;");
       target.exec(schema);
       target.exec("BEGIN");
       target.prepare("INSERT INTO meta VALUES(?,?)").run("schema", "1");
@@ -20437,10 +20703,37 @@ var Store = class {
       for (const c of this.db.prepare("SELECT * FROM resolutions").all())
         target.prepare("INSERT INTO resolutions VALUES(?)").run(c.event_id);
       target.exec("COMMIT;PRAGMA optimize;");
-    } finally {
+      assert2(
+        target.prepare("PRAGMA quick_check").get()?.quick_check === "ok",
+        "SNAPSHOT_INVALID",
+        "Snapshot integrity check failed"
+      );
+    } catch (e) {
       target.close();
+      try {
+        fs5.rmSync(temp, { force: true });
+      } catch {
+      }
+      throw e;
+    } finally {
+      if (reading) this.db.exec("ROLLBACK");
     }
-    fs2.renameSync(temp, file2);
+    target.close();
+    try {
+      const fd = fs5.openSync(temp, "r+");
+      try {
+        fs5.fsyncSync(fd);
+      } finally {
+        fs5.closeSync(fd);
+      }
+      return temp;
+    } catch (e) {
+      try {
+        fs5.rmSync(temp, { force: true });
+      } catch {
+      }
+      throw e;
+    }
   }
   agents() {
     const now = Date.now();
@@ -20577,7 +20870,7 @@ var Store = class {
       this.release(agent.token);
       throw e;
     }
-    this.changed();
+    this.changed(false);
     return agent;
   }
   heartbeat(token, activity) {
@@ -20587,13 +20880,13 @@ var Store = class {
       if (activity) agent.activity = activity.slice(0, 500);
       agent.expiresAt = Date.now() + agent.ttlSeconds * 1e3;
       this.db.prepare("UPDATE agents SET data=?,expires_at=? WHERE token=?").run(JSON.stringify(agent), agent.expiresAt, token);
-      this.changed();
+      this.changed(false);
       return agent;
     });
   }
   release(token) {
     this.db.prepare("DELETE FROM agents WHERE token=?").run(token);
-    this.changed();
+    this.changed(false);
     return { released: true };
   }
   releaseSession(sessionId) {

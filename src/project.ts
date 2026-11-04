@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { z } from 'zod';
 import { assert } from './model.js';
+import { syncDirectory } from './files.js';
 
 const configSchema = z
   .object({
@@ -18,17 +19,20 @@ export type Config = z.infer<typeof configSchema>;
 export function atomicWrite(file: string, data: string | Buffer, mode = 0o600) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temp = file + '.' + crypto.randomUUID() + '.tmp';
-  const fd = fs.openSync(temp, 'wx', mode);
   try {
-    fs.writeFileSync(fd, data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-  try {
+    const fd = fs.openSync(temp, 'wx', mode);
+    try {
+      fs.writeFileSync(fd, data);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.renameSync(temp, file);
+    syncDirectory(path.dirname(file));
   } catch (e) {
-    fs.rmSync(temp, { force: true });
+    try {
+      fs.rmSync(temp, { force: true });
+    } catch {}
     throw e;
   }
 }

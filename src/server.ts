@@ -7,11 +7,23 @@ import { Store } from './store.js';
 import { VERSION } from './version.js';
 import { NexoError, assert } from './model.js';
 import { atomicWrite, localDir, loadConfig } from './project.js';
+import { readRegistry, probeRegistry, processAlive } from './registry.js';
 
 export async function startServer(
   root: string,
   options: { token?: string; port?: number; assets?: string; registry?: boolean } = {},
 ) {
+  root = fs.realpathSync.native(root);
+  if (options.registry !== false) {
+    const prior = readRegistry(root);
+    if (prior)
+      assert(
+        !(await probeRegistry(prior)) && (prior.writerProtocol === 2 || !processAlive(prior.pid)),
+        'SERVER_ALREADY_RUNNING',
+        'A registered Nexo process still owns this directory. Connect through the client for a graceful handoff.',
+        503,
+      );
+  }
   const store = new Store(root),
     token = options.token ?? crypto.randomBytes(32).toString('base64url'),
     instance = crypto.randomUUID();
@@ -29,35 +41,30 @@ export async function startServer(
       .slice(0, 16);
   let origin = '',
     error: string | undefined,
-    flush: NodeJS.Timeout | undefined,
     shuttingDown = false;
+  let closing: Promise<void> | undefined;
   const send = (res: http.ServerResponse, status: number, body: unknown) => {
+    if (shuttingDown) res.setHeader('Connection', 'close');
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify(body));
   };
   const broadcast = () => {
     for (const res of clients) {
+      if (res.destroyed || res.writableEnded) {
+        clients.delete(res);
+        continue;
+      }
       if (res.writableLength > 65536) {
         res.destroy();
         clients.delete(res);
       } else
         res.write(
-          `id: ${instance}:${store.revision}\nevent: change\ndata: ${JSON.stringify({ revision: store.revision, error })}\n\n`,
+          `id: ${instance}:${store.revision}\nevent: change\ndata: ${JSON.stringify({ revision: store.revision, error, snapshot: store.snapshots.state() })}\n\n`,
         );
     }
   };
-  store.onChange = () => {
-    broadcast();
-    clearTimeout(flush);
-    flush = setTimeout(() => {
-      try {
-        store.snapshot();
-      } catch (e) {
-        error = 'Snapshot: ' + String(e);
-        broadcast();
-      }
-    }, 500);
-  };
+  store.onChange = broadcast;
+  store.snapshots.onChange = broadcast;
   async function readBody(req: http.IncomingMessage) {
     let size = 0;
     const chunks: Buffer[] = [];
@@ -98,7 +105,7 @@ export async function startServer(
         403,
       );
       if (url.pathname === '/api/health' && req.method === 'GET')
-        return send(res, 200, { instance, version: VERSION });
+        return send(res, 200, { instance, version: VERSION, draining: shuttingDown });
       const bearer = req.headers.authorization?.startsWith('Bearer ')
         ? req.headers.authorization.slice(7)
         : '';
@@ -130,7 +137,13 @@ export async function startServer(
       if (url.pathname.startsWith('/api/')) {
         assert(privileged || loggedIn, 'AUTH_REQUIRED', 'Autenticação local necessária', 401);
         if (req.method === 'GET' && url.pathname === '/api/state')
-          return send(res, 200, { ...store.state(), instance, healthError: error ?? null });
+          return send(res, 200, {
+            ...store.state(),
+            instance,
+            runtimeVersion: VERSION,
+            healthError: error ?? null,
+            snapshot: store.snapshots.state(),
+          });
         if (req.method === 'GET' && url.pathname === '/api/search')
           return send(res, 200, store.search(url.searchParams.get('q') ?? ''));
         if (req.method === 'GET' && url.pathname === '/api/events') {
@@ -154,11 +167,25 @@ export async function startServer(
         );
         if (url.pathname === '/api/shutdown') {
           send(res, 200, { ok: true });
-          setImmediate(() => void close());
+          void close().catch((e) => console.error('Nexo shutdown:', String(e)));
           return;
         }
-        assert(!error, 'PROJECT_UNHEALTHY', error ?? 'Erro de sincronização');
         const body = await readBody(req);
+        // Recheck after body parsing: shutdown can begin while a request is streaming.
+        assert(
+          !shuttingDown,
+          'SERVER_DRAINING',
+          'Nexo is draining this instance before handoff. Retry through the client.',
+          503,
+        );
+        assert(
+          !error ||
+            ['/api/heartbeat', '/api/release', '/api/session-end', '/api/ticket'].includes(
+              url.pathname,
+            ),
+          'PROJECT_UNHEALTHY',
+          error ?? 'Erro de sincronização',
+        );
         if (url.pathname === '/api/ticket') {
           const ticket = crypto.randomBytes(32).toString('base64url');
           tickets.set(ticket, Date.now() + 60_000);
@@ -263,8 +290,8 @@ export async function startServer(
           return send(res, 200, { ok: true });
         }
         if (url.pathname === '/api/snapshot') {
-          store.snapshot();
-          return send(res, 200, { ok: true });
+          await store.snapshot();
+          return send(res, 200, { ok: true, snapshot: store.snapshots.state() });
         }
         if (url.pathname === '/api/resolve') {
           assert(
@@ -301,16 +328,30 @@ export async function startServer(
   server.requestTimeout = 15_000;
   server.headersTimeout = 10_000;
   server.maxHeadersCount = 50;
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(options.port ?? 0, '127.0.0.1', () => resolve());
-  });
-  const port = (server.address() as any).port;
-  origin = `http://127.0.0.1:${port}`;
-  const registry = { version: 1, pid: process.pid, instance, port, token, root };
-  if (options.registry !== false)
-    atomicWrite(path.join(localDir(root), 'server.json'), JSON.stringify(registry));
-  store.snapshot();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(options.port ?? 0, '127.0.0.1', () => resolve());
+    });
+    const port = (server.address() as any).port;
+    origin = `http://127.0.0.1:${port}`;
+    const registry = {
+      version: 1,
+      writerProtocol: 2,
+      runtimeVersion: VERSION,
+      pid: process.pid,
+      instance,
+      port,
+      token,
+      root,
+    };
+    if (options.registry !== false)
+      atomicWrite(path.join(localDir(root), 'server.json'), JSON.stringify(registry));
+  } catch (e) {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    store.close();
+    throw e;
+  }
   const synchronize = () => {
     try {
       const config = loadConfig(root);
@@ -321,7 +362,7 @@ export async function startServer(
       );
       if (JSON.stringify(config) !== JSON.stringify(store.config)) {
         store.config = config;
-        store.changed();
+        store.changed(false);
       }
       store.sync();
       store.readResolutions();
@@ -338,12 +379,22 @@ export async function startServer(
     }
   };
   let reconcile: NodeJS.Timeout | undefined;
-  const watcher = fs.watch(store.eventsDir, () => {
-    clearTimeout(reconcile);
-    reconcile = setTimeout(synchronize, 150);
-  });
+  let watcher: fs.FSWatcher;
+  try {
+    watcher = fs.watch(store.eventsDir, () => {
+      clearTimeout(reconcile);
+      reconcile = setTimeout(synchronize, 150);
+    });
+  } catch (e) {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    if (options.registry !== false)
+      fs.rmSync(path.join(localDir(root), 'server.json'), { force: true });
+    store.close();
+    throw e;
+  }
   const periodic = setInterval(() => {
     synchronize();
+    store.snapshots.verify();
     broadcast();
     for (const [k, expiry] of tickets) if (expiry < Date.now()) tickets.delete(k);
     for (const [k, expiry] of sessions) if (expiry < Date.now()) sessions.delete(k);
@@ -353,22 +404,53 @@ export async function startServer(
     for (const res of clients) res.write(': heartbeat\n\n');
   }, 15000);
   heartbeat.unref();
-  async function close() {
-    if (shuttingDown) return;
+  function close(): Promise<void> {
+    if (closing) return closing;
     shuttingDown = true;
-    clearTimeout(flush);
-    clearTimeout(reconcile);
-    clearInterval(periodic);
-    clearInterval(heartbeat);
-    watcher.close();
-    for (const client of clients) client.end();
-    store.snapshot();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    store.close();
-    const file = path.join(localDir(root), 'server.json');
-    try {
-      if (JSON.parse(fs.readFileSync(file, 'utf8')).instance === instance) fs.rmSync(file);
-    } catch {}
+    closing = (async () => {
+      store.snapshots.pause();
+      clearTimeout(reconcile);
+      clearInterval(periodic);
+      clearInterval(heartbeat);
+      watcher.close();
+      for (const client of clients) client.end();
+      clients.clear();
+      // Drain accepted HTTP work before capturing the final durable generation.
+      // Explicitly close idle keep-alive sockets; health probes cannot pin handoff.
+      const drained = new Promise<void>((resolve) => server.close(() => resolve()));
+      server.closeIdleConnections();
+      await drained;
+      try {
+        await store.snapshot();
+      } catch (e) {
+        console.error(
+          'Nexo snapshot pending at shutdown; live SQLite/outbox preserved:',
+          String(e),
+        );
+      }
+      const file = path.join(localDir(root), 'server.json');
+      try {
+        if (
+          options.registry !== false &&
+          JSON.parse(fs.readFileSync(file, 'utf8')).instance === instance
+        )
+          fs.rmSync(file);
+      } catch {}
+      store.close();
+    })();
+    return closing;
   }
+  store.snapshots.start();
+  const port = (server.address() as any).port;
+  const registry = {
+    version: 1,
+    writerProtocol: 2,
+    runtimeVersion: VERSION,
+    pid: process.pid,
+    instance,
+    port,
+    token,
+    root,
+  };
   return { server, store, registry, origin, close };
 }

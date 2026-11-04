@@ -89,6 +89,29 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
       { leaseToken: s.store.agents().find((a) => a.taskId === 'form').token },
     );
     await page.getByText('Atualização real recebida pelo board', { exact: true }).waitFor();
+    await s.store.snapshot();
+    const rename = fs.promises.rename;
+    try {
+      fs.promises.rename = async () => {
+        throw Object.assign(new Error('Browser fixture I/O failure'), { code: 'EIO' });
+      };
+      command(
+        s.store,
+        'delivery',
+        'delivery',
+        { description: 'Snapshot recovery fixture' },
+        'update',
+      );
+      await assert.rejects(s.store.snapshot(), (e) => e.code === 'SNAPSHOT_PENDING');
+      await page.getByText('Snapshot aguardando publicação', { exact: true }).waitFor();
+      assert.equal(await page.locator('.error').count(), 0);
+      assert.equal(await page.locator('.snapshot-warning').count(), 1);
+      await page.screenshot({ path: 'test-results/snapshot-warning.png', fullPage: true });
+    } finally {
+      fs.promises.rename = rename;
+    }
+    await s.store.snapshot();
+    await page.locator('.snapshot-warning').waitFor({ state: 'detached' });
     for (const width of [1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       assert.ok(

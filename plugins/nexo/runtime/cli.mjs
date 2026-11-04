@@ -7,15 +7,15 @@ var __export = (target, all) => {
 };
 
 // src/cli.ts
-import fs5 from "node:fs";
-import path5 from "node:path";
-import crypto4 from "node:crypto";
+import fs9 from "node:fs";
+import path8 from "node:path";
+import crypto5 from "node:crypto";
 import { spawn as spawn2 } from "node:child_process";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/project.ts
-import fs from "node:fs";
-import path from "node:path";
+import fs2 from "node:fs";
+import path2 from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 
@@ -836,10 +836,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema2) {
   return mergeDefs(schema2._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path9) {
+  if (!path9)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path9.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -1179,11 +1179,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path9, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path9);
     return iss;
   });
 }
@@ -1645,16 +1645,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path6 = []) => {
+  const processError = (error63, path9 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -1693,17 +1693,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path6 = []) => {
+  const processError = (error63, path9 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -1742,8 +1742,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path6) {
+  const path9 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path9) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -18881,13 +18881,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path6 = ref.slice(1).split("/").filter(Boolean);
-  if (path6.length === 0) {
+  const path9 = ref.slice(1).split("/").filter(Boolean);
+  if (path9.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path6[0] === defsKey) {
-    const key = path6[1] === void 0 ? void 0 : decodeJSONPointerSegment(path6[1]);
+  if (path9[0] === defsKey) {
+    const key = path9[1] === void 0 ? void 0 : decodeJSONPointerSegment(path9[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -19834,6 +19834,39 @@ function assert2(ok, code, message, status = 409) {
   if (!ok) throw new NexoError(code, message, status);
 }
 
+// src/files.ts
+import fs from "node:fs";
+import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+function syncDirectory(dir) {
+  if (process.platform === "win32") return;
+  const fd = fs.openSync(dir, "r");
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+async function replaceFile(source, target, onRetry, timeoutMs = 3e3) {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  for (; ; ) {
+    attempt++;
+    try {
+      await fs.promises.rename(source, target);
+      syncDirectory(path.dirname(target));
+      return attempt;
+    } catch (e) {
+      const code = e.code ?? "UNKNOWN";
+      if (!["EPERM", "EACCES", "EBUSY"].includes(code) || Date.now() >= deadline) throw e;
+      onRetry(code, attempt);
+      await delay(
+        Math.min(deadline - Date.now(), 40 * 2 ** Math.min(attempt, 3) + Math.random() * 40)
+      );
+    }
+  }
+}
+
 // src/project.ts
 var configSchema = external_exports.object({
   schemaVersion: external_exports.literal(1),
@@ -19843,44 +19876,48 @@ var configSchema = external_exports.object({
   maxTeamsPerDelivery: external_exports.number().int().min(1).max(32)
 }).strict();
 function atomicWrite(file2, data, mode = 384) {
-  fs.mkdirSync(path.dirname(file2), { recursive: true });
+  fs2.mkdirSync(path2.dirname(file2), { recursive: true });
   const temp = file2 + "." + crypto.randomUUID() + ".tmp";
-  const fd = fs.openSync(temp, "wx", mode);
   try {
-    fs.writeFileSync(fd, data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-  try {
-    fs.renameSync(temp, file2);
+    const fd = fs2.openSync(temp, "wx", mode);
+    try {
+      fs2.writeFileSync(fd, data);
+      fs2.fsyncSync(fd);
+    } finally {
+      fs2.closeSync(fd);
+    }
+    fs2.renameSync(temp, file2);
+    syncDirectory(path2.dirname(file2));
   } catch (e) {
-    fs.rmSync(temp, { force: true });
+    try {
+      fs2.rmSync(temp, { force: true });
+    } catch {
+    }
     throw e;
   }
 }
 function findProject(cwd = process.cwd()) {
-  let current = fs.realpathSync.native(cwd);
+  let current = fs2.realpathSync.native(cwd);
   for (; ; ) {
-    if (fs.existsSync(path.join(current, ".nexo", "project.json"))) return current;
-    const up = path.dirname(current);
+    if (fs2.existsSync(path2.join(current, ".nexo", "project.json"))) return current;
+    const up = path2.dirname(current);
     if (up === current) break;
     current = up;
   }
   throw new Error("Projeto n\xE3o inicializado. Execute /nexo:init neste diret\xF3rio.");
 }
 function loadConfig(root) {
-  const dir = path.join(root, ".nexo");
+  const dir = path2.join(root, ".nexo");
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     ".nexo n\xE3o pode ser um link simb\xF3lico",
     400
   );
-  return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, "project.json"), "utf8")));
+  return configSchema.parse(JSON.parse(fs2.readFileSync(path2.join(dir, "project.json"), "utf8")));
 }
 function initialize(cwd = process.cwd(), name, options = {}) {
-  let root = fs.realpathSync.native(cwd);
+  let root = fs2.realpathSync.native(cwd);
   if (!options.exact)
     try {
       root = execFileSync("git", ["-C", root, "rev-parse", "--show-toplevel"], {
@@ -19890,13 +19927,13 @@ function initialize(cwd = process.cwd(), name, options = {}) {
       }).trim();
     } catch {
     }
-  root = fs.realpathSync.native(root);
-  const dir = path.join(root, ".nexo");
-  if (fs.existsSync(path.join(dir, "project.json")))
+  root = fs2.realpathSync.native(root);
+  const dir = path2.join(root, ".nexo");
+  if (fs2.existsSync(path2.join(dir, "project.json")))
     return { root, config: loadConfig(root), created: false };
-  fs.mkdirSync(dir, { recursive: true });
+  fs2.mkdirSync(dir, { recursive: true });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     ".nexo n\xE3o pode ser um link simb\xF3lico",
     400
@@ -19904,32 +19941,32 @@ function initialize(cwd = process.cwd(), name, options = {}) {
   const config2 = {
     schemaVersion: 1,
     id: crypto.randomUUID(),
-    name: name ?? path.basename(root),
+    name: name ?? path2.basename(root),
     maxAgents: 8,
     maxTeamsPerDelivery: 3
   };
-  const fd = fs.openSync(path.join(dir, "project.json"), "wx");
+  const fd = fs2.openSync(path2.join(dir, "project.json"), "wx");
   try {
-    fs.writeFileSync(fd, JSON.stringify(config2, null, 2) + "\n");
-    fs.fsyncSync(fd);
+    fs2.writeFileSync(fd, JSON.stringify(config2, null, 2) + "\n");
+    fs2.fsyncSync(fd);
   } finally {
-    fs.closeSync(fd);
+    fs2.closeSync(fd);
   }
-  if (!fs.existsSync(path.join(dir, ".gitignore")))
-    atomicWrite(path.join(dir, ".gitignore"), "local/\n*.tmp\n");
+  if (!fs2.existsSync(path2.join(dir, ".gitignore")))
+    atomicWrite(path2.join(dir, ".gitignore"), "local/\n*.tmp\n");
   atomicWrite(
-    path.join(dir, ".gitattributes"),
+    path2.join(dir, ".gitattributes"),
     "project.sqlite binary\nevents/*.json text eol=lf\n"
   );
-  fs.mkdirSync(path.join(dir, "events"), { recursive: true });
-  const command = path.join(root, ".claude", "commands", "board.md");
-  if (!fs.existsSync(command))
+  fs2.mkdirSync(path2.join(dir, "events"), { recursive: true });
+  const command = path2.join(root, ".claude", "commands", "board.md");
+  if (!fs2.existsSync(command))
     atomicWrite(
       command,
       "---\ndescription: Open the live Nexo board for this project\n---\nInvoke the `nexo:board` skill for the current project. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
     );
-  const rule = path.join(root, ".claude", "rules", "nexo.md");
-  if (!fs.existsSync(rule))
+  const rule = path2.join(root, ".claude", "rules", "nexo.md");
+  if (!fs2.existsSync(rule))
     atomicWrite(
       rule,
       "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Read Nexo MCP state before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
@@ -19937,10 +19974,10 @@ function initialize(cwd = process.cwd(), name, options = {}) {
   return { root, config: config2, created: true };
 }
 function localDir(root) {
-  const dir = path.join(root, ".nexo", "local");
-  fs.mkdirSync(dir, { recursive: true, mode: 448 });
+  const dir = path2.join(root, ".nexo", "local");
+  fs2.mkdirSync(dir, { recursive: true, mode: 448 });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     "local n\xE3o pode ser link simb\xF3lico",
     400
@@ -19948,10 +19985,10 @@ function localDir(root) {
   return dir;
 }
 function safeEventsDir(root) {
-  const dir = path.join(root, ".nexo", "events");
-  fs.mkdirSync(dir, { recursive: true });
+  const dir = path2.join(root, ".nexo", "events");
+  fs2.mkdirSync(dir, { recursive: true });
   assert2(
-    !fs.lstatSync(dir).isSymbolicLink(),
+    !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
     "events n\xE3o pode ser link simb\xF3lico",
     400
@@ -19960,13 +19997,13 @@ function safeEventsDir(root) {
 }
 
 // src/client.ts
-import fs2 from "node:fs";
-import path2 from "node:path";
+import fs5 from "node:fs";
+import path5 from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // src/version.ts
-var VERSION = "1.0.0-rc.2";
+var VERSION = "1.0.0-rc.3";
 function compareVersions(a, b) {
   const parse4 = (s) => {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
@@ -19992,48 +20029,192 @@ function compareVersions(a, b) {
   return 0;
 }
 
+// src/locks.ts
+import fs3 from "node:fs";
+import path3 from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import crypto2 from "node:crypto";
+import { setTimeout as delay2 } from "node:timers/promises";
+function tryLock(root, name) {
+  const file2 = path3.join(localDir(root), name + ".sqlite");
+  if (fs3.existsSync(file2))
+    assert2(!fs3.lstatSync(file2).isSymbolicLink(), "UNSAFE_PATH", "Lock cannot be a symlink");
+  const db = new DatabaseSync(file2, { timeout: 0 });
+  try {
+    db.exec("BEGIN IMMEDIATE");
+  } catch (e) {
+    db.close();
+    const code = Number(e.errcode) & 255;
+    if (code === 5 || code === 6) return;
+    throw e;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    try {
+      db.exec("ROLLBACK");
+    } finally {
+      db.close();
+    }
+  };
+}
+function acquireWriter(root) {
+  const release = tryLock(root, "writer");
+  if (!release)
+    throw new NexoError(
+      "WRITER_BUSY",
+      "Another Nexo writer owns this directory. Use the registered service; a live owner is never replaced by a timeout.",
+      503
+    );
+  return release;
+}
+async function acquireStartup(root) {
+  const deadline = Date.now() + 3e4;
+  let release;
+  while (!(release = tryLock(root, "startup"))) {
+    if (Date.now() >= deadline)
+      throw new NexoError(
+        "STARTUP_BUSY",
+        "Another client is starting or upgrading Nexo. No live lock was stolen.",
+        503
+      );
+    await delay2(100);
+  }
+  const dir = path3.join(localDir(root), "startup.lock");
+  const file2 = path3.join(dir, "owner.json");
+  const instance = crypto2.randomUUID();
+  let timer;
+  let owned = false;
+  try {
+    for (; ; ) {
+      try {
+        fs3.mkdirSync(dir);
+        owned = true;
+        break;
+      } catch (e) {
+        if (e.code !== "EEXIST") throw e;
+      }
+      assert2(
+        !fs3.lstatSync(dir).isSymbolicLink(),
+        "UNSAFE_PATH",
+        "Startup guard cannot be a symlink"
+      );
+      try {
+        const owner = JSON.parse(fs3.readFileSync(file2, "utf8"));
+        if (owner.protocol === 2 && owner.root === root) {
+          fs3.rmSync(file2);
+          fs3.rmdirSync(dir);
+          continue;
+        }
+      } catch (e) {
+        if (!["ENOENT", "ENOTEMPTY"].includes(e.code ?? "")) throw e;
+      }
+      if (Date.now() >= deadline)
+        throw new NexoError(
+          "LEGACY_STARTUP_BUSY",
+          "A legacy Nexo startup lock has no verified owner. Finish/reload that client; it was not removed by age.",
+          503
+        );
+      await delay2(100);
+    }
+    fs3.writeFileSync(file2, JSON.stringify({ protocol: 2, root, instance, pid: process.pid }), {
+      flag: "wx",
+      mode: 384
+    });
+    timer = setInterval(() => {
+      try {
+        const now = /* @__PURE__ */ new Date();
+        fs3.utimesSync(dir, now, now);
+      } catch {
+      }
+    }, 5e3);
+    timer.unref();
+    return () => {
+      clearInterval(timer);
+      try {
+        if (JSON.parse(fs3.readFileSync(file2, "utf8")).instance === instance) {
+          fs3.rmSync(file2);
+          fs3.rmdirSync(dir);
+        }
+      } catch {
+      }
+      release();
+    };
+  } catch (e) {
+    if (owned) {
+      try {
+        fs3.rmSync(file2, { force: true });
+        fs3.rmdirSync(dir);
+      } catch {
+      }
+    }
+    release();
+    throw e;
+  }
+}
+
+// src/registry.ts
+import fs4 from "node:fs";
+import path4 from "node:path";
+function readRegistry(root) {
+  let raw;
+  try {
+    raw = fs4.readFileSync(path4.join(localDir(root), "server.json"), "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") return;
+    throw e;
+  }
+  const r = JSON.parse(raw);
+  assert2(
+    r.root === root && r.version === 1 && Number.isInteger(r.pid) && r.pid > 0 && Number.isInteger(r.port) && r.port > 0 && r.port <= 65535 && typeof r.instance === "string" && typeof r.token === "string",
+    "REGISTRY_INVALID",
+    "Nexo registry identity is invalid; no second writer was started.",
+    503
+  );
+  return r;
+}
+async function probeRegistry(r) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${r.port}/api/health`, {
+      headers: { Connection: "close" },
+      signal: AbortSignal.timeout(1e3)
+    });
+    const health = await response.json();
+    if (response.ok && health.instance === r.instance && typeof health.version === "string")
+      return { ...r, runtimeVersion: health.version, draining: health.draining === true };
+  } catch {
+  }
+}
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code !== "ESRCH";
+  }
+}
+
 // src/client.ts
 var wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function ensureServer(root = findProject()) {
-  root = fs2.realpathSync.native(root);
-  const dir = localDir(root), file2 = path2.join(dir, "server.json"), lock = path2.join(dir, "startup.lock");
+  root = fs5.realpathSync.native(root);
+  const dir = localDir(root), file2 = path5.join(dir, "server.json");
   const existing = async () => {
-    try {
-      const r = JSON.parse(fs2.readFileSync(file2, "utf8"));
-      if (r.root !== root || !Number.isInteger(r.port) || r.port < 1 || r.port > 65535 || r.version !== 1)
-        return;
-      const response = await fetch(`http://127.0.0.1:${r.port}/api/health`, {
-        signal: AbortSignal.timeout(700)
-      });
-      const health = await response.json();
-      if (health.instance === r.instance && typeof health.version === "string")
-        return { ...r, runtimeVersion: health.version };
-    } catch {
-    }
+    const r = readRegistry(root);
+    return r ? probeRegistry(r) : void 0;
   };
   const running = await existing();
-  const reusable = (r) => !!r?.runtimeVersion && compareVersions(r.runtimeVersion, VERSION) >= 0;
+  const reusable = (r) => !!r?.runtimeVersion && !r.draining && compareVersions(r.runtimeVersion, VERSION) >= 0;
   if (reusable(running)) return running;
-  try {
-    fs2.mkdirSync(lock);
-  } catch {
-    for (let attempt = 0; attempt < 120; attempt++) {
-      if (!fs2.existsSync(lock)) return ensureServer(root);
-      await wait(250);
-    }
-    if (fs2.existsSync(lock) && Date.now() - fs2.statSync(lock).mtimeMs > 3e4) {
-      fs2.rmdirSync(lock);
-      return ensureServer(root);
-    }
-    throw new Error("Servi\xE7o est\xE1 iniciando. Tente novamente em alguns segundos.");
-  }
+  const releaseStartup = await acquireStartup(root);
   try {
     const r = await existing();
     if (reusable(r)) return r;
     if (r) {
       const response = await fetch(`http://127.0.0.1:${r.port}/api/shutdown`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${r.token}` },
+        headers: { Authorization: `Bearer ${r.token}`, Connection: "close" },
         body: "{}",
         signal: AbortSignal.timeout(15e3)
       });
@@ -20042,44 +20223,38 @@ async function ensureServer(root = findProject()) {
           "Nexo could not gracefully upgrade the board service. Retry after the current session completes."
         );
       await response.text();
-      for (let i = 0; i < 300; i++) {
+      for (let i = 0; i < 500; i++) {
         try {
-          if (JSON.parse(fs2.readFileSync(file2, "utf8")).instance !== r.instance) break;
+          if (JSON.parse(fs5.readFileSync(file2, "utf8")).instance !== r.instance) break;
         } catch (e) {
           if (e.code === "ENOENT") break;
           throw e;
         }
         await wait(50);
       }
-      if (fs2.existsSync(file2) && JSON.parse(fs2.readFileSync(file2, "utf8")).instance === r.instance)
+      if (fs5.existsSync(file2) && JSON.parse(fs5.readFileSync(file2, "utf8")).instance === r.instance)
         throw new Error(
           "Nexo is still closing its previous board service. Retry shortly; no second writer was started."
         );
     }
-    try {
-      const previous = JSON.parse(fs2.readFileSync(file2, "utf8"));
-      if (previous.root === root && Number.isInteger(previous.pid)) {
-        let alive = false;
-        try {
-          process.kill(previous.pid, 0);
-          alive = true;
-        } catch (e) {
-          alive = e.code === "EPERM";
-        }
-        if (alive)
-          throw new Error(
-            "O processo do board ainda existe, mas n\xE3o responde. Consulte .nexo/local/server.log antes de reinici\xE1-lo; Nexo n\xE3o inicia um segundo escritor."
-          );
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message.startsWith("O processo")) throw e;
-    }
-    const log = fs2.openSync(path2.join(dir, "server.log"), "a");
+    const previous = readRegistry(root);
+    if (previous?.writerProtocol === 2) {
+      const release = tryLock(root, "writer");
+      if (!release)
+        throw new Error(
+          "The directory writer is still alive but not responding. Nexo will not start a second writer."
+        );
+      release();
+    } else if (previous && processAlive(previous.pid))
+      throw new Error(
+        "O processo do board ainda existe, mas n\xE3o responde. Consulte .nexo/local/server.log; Nexo n\xE3o inicia um segundo escritor."
+      );
+    const log = fs5.openSync(path5.join(dir, "server.log"), "a");
     const child = spawn(
       process.execPath,
       [
         "--disable-warning=ExperimentalWarning",
-        path2.join(path2.dirname(fileURLToPath(import.meta.url)), "cli.mjs"),
+        path5.join(path5.dirname(fileURLToPath(import.meta.url)), "cli.mjs"),
         "serve",
         "--project",
         root
@@ -20091,7 +20266,7 @@ async function ensureServer(root = findProject()) {
       spawnError = e;
     });
     child.unref();
-    fs2.closeSync(log);
+    fs5.closeSync(log);
     for (let attempt = 0; attempt < 60; attempt++) {
       if (spawnError) throw spawnError;
       const value = await existing();
@@ -20100,13 +20275,10 @@ async function ensureServer(root = findProject()) {
     }
     throw new Error("O board n\xE3o iniciou. Consulte .nexo/local/server.log e /nexo:doctor.");
   } finally {
-    try {
-      fs2.rmdirSync(lock);
-    } catch {
-    }
+    releaseStartup();
   }
 }
-async function request(route, body, root) {
+async function request(route, body, root, retried = false) {
   const r = await ensureServer(root);
   const response = await fetch(`http://127.0.0.1:${r.port}/api/${route}`, {
     method: body === void 0 ? "GET" : "POST",
@@ -20115,6 +20287,10 @@ async function request(route, body, root) {
     signal: AbortSignal.timeout(2e4)
   });
   const result = await response.json();
+  if (!response.ok && result.error === "SERVER_DRAINING" && !retried) {
+    await wait(100);
+    return request(route, body, root, true);
+  }
   if (!response.ok) throw new Error(`${result.error}: ${result.message}`);
   return result;
 }
@@ -20142,16 +20318,176 @@ async function board(root, open2 = true) {
 
 // src/server.ts
 import http from "node:http";
-import fs4 from "node:fs";
-import path4 from "node:path";
-import crypto3 from "node:crypto";
+import fs8 from "node:fs";
+import path7 from "node:path";
+import crypto4 from "node:crypto";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // src/store.ts
-import fs3 from "node:fs";
-import path3 from "node:path";
-import crypto2 from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
+import fs7 from "node:fs";
+import path6 from "node:path";
+import crypto3 from "node:crypto";
+import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
+
+// src/snapshots.ts
+import fs6 from "node:fs";
+var Snapshots = class {
+  constructor(target, stage) {
+    this.target = target;
+    this.stage = stage;
+  }
+  target;
+  stage;
+  generation = 0;
+  publishedGeneration = -1;
+  job;
+  timer;
+  dirtySince = Date.now();
+  automatic = false;
+  failures = 0;
+  stopped = false;
+  artifactStamp = "";
+  info = {
+    status: "pending",
+    dirty: true,
+    generation: 0,
+    publishedGeneration: -1,
+    attempts: 0,
+    publications: 0,
+    lastSuccessAt: null,
+    lastError: null
+  };
+  onChange = () => {
+  };
+  state() {
+    return {
+      ...this.info,
+      generation: this.generation,
+      publishedGeneration: this.publishedGeneration,
+      dirty: this.publishedGeneration < this.generation
+    };
+  }
+  get busy() {
+    return !!this.job;
+  }
+  start() {
+    this.automatic = true;
+    this.schedule(0);
+  }
+  pause() {
+    this.automatic = false;
+    clearTimeout(this.timer);
+  }
+  stamp() {
+    try {
+      const s = fs6.lstatSync(this.target);
+      return s.isFile() ? [s.dev, s.ino, s.size, s.mtimeMs, s.ctimeMs].join(":") : "";
+    } catch {
+      return "";
+    }
+  }
+  verify() {
+    if (!this.job && this.publishedGeneration >= 0 && this.stamp() !== this.artifactStamp) {
+      this.publishedGeneration = -1;
+      this.info.status = "pending";
+      this.schedule(0);
+      this.onChange();
+    }
+  }
+  markDirty() {
+    if (this.publishedGeneration === this.generation) this.dirtySince = Date.now();
+    this.generation++;
+    if (!this.job && !this.info.lastError) this.info.status = "pending";
+    if (this.failures) return;
+    this.schedule(Math.min(500, Math.max(0, 5e3 - (Date.now() - this.dirtySince))));
+  }
+  schedule(ms) {
+    if (!this.automatic || this.stopped) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      void this.flush().catch(() => {
+      });
+    }, ms);
+    this.timer.unref();
+  }
+  async flush(requested = this.generation) {
+    if (this.stopped) throw new Error("Snapshot publisher is closed");
+    this.verify();
+    if (this.publishedGeneration >= requested && !this.job) return;
+    clearTimeout(this.timer);
+    if (!this.job) {
+      const captured = this.generation;
+      this.job = this.publish(captured).finally(() => {
+        this.job = void 0;
+        if (this.publishedGeneration < this.generation)
+          this.schedule(
+            this.failures ? Math.min(3e4, 1e3 * 2 ** Math.min(this.failures - 1, 5)) : 0
+          );
+      });
+    }
+    await this.job;
+    if (this.publishedGeneration < requested) await this.flush(requested);
+  }
+  async publish(captured) {
+    let temp;
+    this.info.status = "publishing";
+    this.info.attempts = 0;
+    this.onChange();
+    try {
+      temp = this.stage();
+      this.info.attempts = await replaceFile(temp, this.target, (code, attempt) => {
+        this.info.status = "retrying";
+        this.info.attempts = attempt;
+        this.info.lastError = {
+          code,
+          message: "Snapshot replacement is waiting for a file handle to be released.",
+          operation: "replace",
+          at: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        this.onChange();
+      });
+      this.artifactStamp = this.stamp();
+      this.publishedGeneration = captured;
+      this.info.status = this.generation === captured ? "ready" : "pending";
+      this.info.lastSuccessAt = (/* @__PURE__ */ new Date()).toISOString();
+      this.info.lastError = null;
+      this.info.publications++;
+      this.failures = 0;
+    } catch (e) {
+      const err = e;
+      this.failures++;
+      this.info.status = "error";
+      this.info.lastError = {
+        code: err.code ?? "SNAPSHOT_FAILED",
+        message: err.message,
+        operation: temp ? "replace" : "stage",
+        at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      const recovery = ["EPERM", "EACCES", "EBUSY"].includes(this.info.lastError.code) ? "Close readers of .nexo/project.sqlite, check file permissions and retry before committing it." : "Inspect snapshot.lastError and filesystem health, then retry before committing it.";
+      throw new NexoError(
+        "SNAPSHOT_PENDING",
+        "The live database and event outbox are preserved. Snapshot publication failed (" + this.info.lastError.code + "). " + recovery,
+        503
+      );
+    } finally {
+      if (temp) {
+        try {
+          await fs6.promises.rm(temp, { force: true });
+        } catch {
+        }
+      }
+      this.onChange();
+    }
+  }
+  /** Called only after in-flight publication has settled, while ownership is held. */
+  stop() {
+    if (this.job) throw new Error("Wait for the snapshot publisher before closing its owner");
+    this.stopped = true;
+    clearTimeout(this.timer);
+  }
+};
+
+// src/store.ts
 var schema = `PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS entities(kind TEXT NOT NULL,id TEXT PRIMARY KEY,version INTEGER NOT NULL,data TEXT NOT NULL,updated_at TEXT NOT NULL);
@@ -20166,7 +20502,7 @@ CREATE TABLE IF NOT EXISTS agents(agent_id TEXT PRIMARY KEY,task_id TEXT NOT NUL
 CREATE INDEX IF NOT EXISTS agent_task ON agents(task_id,expires_at);
 CREATE TABLE IF NOT EXISTS fences(task_id TEXT PRIMARY KEY,value INTEGER NOT NULL);
 CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(id UNINDEXED,title,description,tokenize='unicode61');`;
-var hash2 = (e) => crypto2.createHash("sha256").update(JSON.stringify(e)).digest("hex");
+var hash2 = (e) => crypto3.createHash("sha256").update(JSON.stringify(e)).digest("hex");
 var parse3 = (r) => ({
   kind: r.kind,
   id: r.id,
@@ -20181,22 +20517,36 @@ var Store = class {
     this.config = loadConfig(root);
     this.dir = localDir(root);
     this.eventsDir = safeEventsDir(root);
-    this.db = new DatabaseSync(path3.join(this.dir, "state.sqlite"), { timeout: 5e3 });
-    this.db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
-    this.db.exec(schema);
-    const version2 = this.db.prepare("SELECT value FROM meta WHERE key=?").get("schema");
-    assert2(
-      !version2 || version2.value === "1",
-      "SCHEMA_VERSION",
-      "Vers\xE3o de banco n\xE3o suportada. Atualize o Nexo."
-    );
-    this.db.prepare("INSERT OR IGNORE INTO meta VALUES(?,?)").run("schema", "1");
-    this.exportEvents();
-    this.sync();
-    if (!this.db.prepare("SELECT value FROM meta WHERE key=?").get("frontier")) {
-      const events = this.events(), frontier = new Set(events.map((e) => e.id));
-      for (const e of events) for (const p of e.parents) frontier.delete(p);
-      this.db.prepare("INSERT INTO meta VALUES(?,?)").run("frontier", JSON.stringify([...frontier].sort()));
+    this.releaseWriter = acquireWriter(root);
+    try {
+      this.db = new DatabaseSync2(path6.join(this.dir, "state.sqlite"), { timeout: 5e3 });
+      this.db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
+      this.db.exec(schema);
+      const version2 = this.db.prepare("SELECT value FROM meta WHERE key=?").get("schema");
+      assert2(
+        !version2 || version2.value === "1",
+        "SCHEMA_VERSION",
+        "Vers\xE3o de banco n\xE3o suportada. Atualize o Nexo."
+      );
+      this.db.prepare("INSERT OR IGNORE INTO meta VALUES(?,?)").run("schema", "1");
+      this.snapshots = new Snapshots(
+        path6.join(root, ".nexo", "project.sqlite"),
+        () => this.stageSnapshot()
+      );
+      this.exportEvents();
+      this.sync();
+      if (!this.db.prepare("SELECT value FROM meta WHERE key=?").get("frontier")) {
+        const events = this.events(), frontier = new Set(events.map((e) => e.id));
+        for (const e of events) for (const p of e.parents) frontier.delete(p);
+        this.db.prepare("INSERT INTO meta VALUES(?,?)").run("frontier", JSON.stringify([...frontier].sort()));
+      }
+    } catch (e) {
+      try {
+        this.db?.close();
+      } finally {
+        this.releaseWriter();
+      }
+      throw e;
     }
   }
   root;
@@ -20205,15 +20555,19 @@ var Store = class {
   dir;
   eventsDir;
   revision = 0;
-  onChange = () => {
+  onChange = (_durable) => {
   };
+  snapshots;
+  releaseWriter;
   closed = false;
   directoryStamp = "";
   fileCache = /* @__PURE__ */ new Map();
   close() {
     if (!this.closed) {
-      this.closed = true;
+      this.snapshots.stop();
       this.db.close();
+      this.closed = true;
+      this.releaseWriter();
     }
   }
   get(id2) {
@@ -20240,9 +20594,10 @@ var Store = class {
       throw e;
     }
   }
-  changed() {
+  changed(durable = true) {
     this.revision++;
-    this.onChange();
+    if (durable) this.snapshots.markDirty();
+    this.onChange(durable);
   }
   validate(command) {
     const current = this.get(command.id);
@@ -20472,6 +20827,7 @@ var Store = class {
         "IDEMPOTENCY_MISMATCH",
         "commandId reutilizado com outro conte\xFAdo"
       );
+      this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
     }
     const result = this.transaction(() => {
@@ -20523,7 +20879,7 @@ var Store = class {
       const body = {
         schema: 1,
         projectId: this.config.id,
-        id: crypto2.randomUUID(),
+        id: crypto3.randomUUID(),
         parents,
         at: (/* @__PURE__ */ new Date()).toISOString(),
         command: clean
@@ -20539,18 +20895,18 @@ var Store = class {
       }
       return { entity, eventId: event.id, duplicate: false };
     });
-    this.exportEvents();
     this.changed();
+    this.exportEvents();
     return result;
   }
   exportEvents() {
     let wrote = false;
     for (const row of this.db.prepare("SELECT event FROM events WHERE exported=0").all()) {
       const event = JSON.parse(row.event);
-      const name = event.id + ".json", file2 = path3.join(this.eventsDir, name);
-      if (!fs3.existsSync(file2)) {
+      const name = event.id + ".json", file2 = path6.join(this.eventsDir, name);
+      if (!fs7.existsSync(file2)) {
         atomicWrite(file2, JSON.stringify(event, null, 2) + "\n");
-        const stat = fs3.lstatSync(file2);
+        const stat = fs7.lstatSync(file2);
         this.fileCache.set(name, {
           stamp: stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size,
           event
@@ -20559,24 +20915,25 @@ var Store = class {
       this.db.prepare("UPDATE events SET exported=1 WHERE id=?").run(event.id);
       wrote = true;
     }
-    if (wrote) this.directoryStamp = String(fs3.statSync(this.eventsDir).mtimeMs);
+    if (wrote) this.directoryStamp = String(fs7.statSync(this.eventsDir).mtimeMs);
   }
   sync(force = true) {
-    const directoryStamp = String(fs3.statSync(this.eventsDir).mtimeMs);
+    this.exportEvents();
+    const directoryStamp = String(fs7.statSync(this.eventsDir).mtimeMs);
     if (!force && directoryStamp === this.directoryStamp) return false;
     const existing = new Map(this.events().map((e) => [e.id, e]));
     const known = /* @__PURE__ */ new Map();
     let dirty = false;
-    for (const name of fs3.readdirSync(this.eventsDir)) {
+    for (const name of fs7.readdirSync(this.eventsDir)) {
       if (!/^[0-9a-f-]{36}\.json$/.test(name)) continue;
-      const file2 = path3.join(this.eventsDir, name), stat = fs3.lstatSync(file2);
+      const file2 = path6.join(this.eventsDir, name), stat = fs7.lstatSync(file2);
       assert2(
         stat.isFile() && !stat.isSymbolicLink() && stat.size < 1024 * 1024,
         "INVALID_EVENT",
         "Arquivo de evento inv\xE1lido"
       );
       const stamp = stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size, cached2 = this.fileCache.get(name);
-      const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs3.readFileSync(file2, "utf8"));
+      const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs7.readFileSync(file2, "utf8"));
       const { hash: sum, ...body } = event;
       assert2(
         event.id + ".json" === name && event.schema === 1 && event.projectId === this.config.id && Array.isArray(event.parents) && event.parents.every((p) => typeof p === "string") && hash2(body) === sum,
@@ -20644,13 +21001,12 @@ var Store = class {
       for (const e of ordered) for (const p of e.parents) frontier.delete(p);
       this.db.prepare("INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run("frontier", JSON.stringify([...frontier].sort()));
     });
-    this.snapshot();
     this.changed();
     return true;
   }
   resolve(eventIds) {
-    const file2 = path3.join(this.root, ".nexo", "resolutions.json");
-    const previous = fs3.existsSync(file2) ? JSON.parse(fs3.readFileSync(file2, "utf8")) : [];
+    const file2 = path6.join(this.root, ".nexo", "resolutions.json");
+    const previous = fs7.existsSync(file2) ? JSON.parse(fs7.readFileSync(file2, "utf8")) : [];
     const valid = new Set(
       this.db.prepare("SELECT event_id FROM conflicts").all().map((r) => r.event_id)
     );
@@ -20664,29 +21020,39 @@ var Store = class {
       JSON.stringify([.../* @__PURE__ */ new Set([...previous, ...eventIds])].sort(), null, 2) + "\n"
     );
     this.readResolutions();
-    this.snapshot();
-    this.changed();
   }
   readResolutions() {
-    const file2 = path3.join(this.root, ".nexo", "resolutions.json");
-    if (fs3.existsSync(file2)) {
-      const ids = JSON.parse(fs3.readFileSync(file2, "utf8"));
+    const file2 = path6.join(this.root, ".nexo", "resolutions.json");
+    if (fs7.existsSync(file2)) {
+      const ids = JSON.parse(fs7.readFileSync(file2, "utf8"));
       assert2(
         Array.isArray(ids) && ids.every((id2) => typeof id2 === "string" && /^[0-9a-f-]{36}$/.test(id2)),
         "INVALID_RESOLUTION",
         "Resolu\xE7\xF5es inv\xE1lidas"
       );
+      const previous = this.db.prepare("SELECT event_id FROM resolutions ORDER BY event_id").all().map((r) => r.event_id);
+      const next = [...new Set(ids)].sort();
+      if (JSON.stringify(previous) === JSON.stringify(next)) return;
       this.transaction(() => {
         this.db.exec("DELETE FROM resolutions");
         for (const id2 of ids)
           this.db.prepare("INSERT OR IGNORE INTO resolutions VALUES(?)").run(id2);
       });
+      this.changed();
     }
   }
   snapshot() {
-    const file2 = path3.join(this.root, ".nexo", "project.sqlite"), temp = path3.join(this.dir, "snapshot-" + crypto2.randomUUID() + ".sqlite");
-    const target = new DatabaseSync(temp);
+    return this.snapshots.flush();
+  }
+  stageSnapshot() {
+    this.exportEvents();
+    const temp = path6.join(this.dir, "snapshot-v2-" + crypto3.randomUUID() + ".sqlite");
+    const target = new DatabaseSync2(temp);
+    let reading = false;
     try {
+      this.db.exec("BEGIN");
+      reading = true;
+      target.exec("PRAGMA synchronous=FULL;");
       target.exec(schema);
       target.exec("BEGIN");
       target.prepare("INSERT INTO meta VALUES(?,?)").run("schema", "1");
@@ -20701,10 +21067,37 @@ var Store = class {
       for (const c of this.db.prepare("SELECT * FROM resolutions").all())
         target.prepare("INSERT INTO resolutions VALUES(?)").run(c.event_id);
       target.exec("COMMIT;PRAGMA optimize;");
-    } finally {
+      assert2(
+        target.prepare("PRAGMA quick_check").get()?.quick_check === "ok",
+        "SNAPSHOT_INVALID",
+        "Snapshot integrity check failed"
+      );
+    } catch (e) {
       target.close();
+      try {
+        fs7.rmSync(temp, { force: true });
+      } catch {
+      }
+      throw e;
+    } finally {
+      if (reading) this.db.exec("ROLLBACK");
     }
-    fs3.renameSync(temp, file2);
+    target.close();
+    try {
+      const fd = fs7.openSync(temp, "r+");
+      try {
+        fs7.fsyncSync(fd);
+      } finally {
+        fs7.closeSync(fd);
+      }
+      return temp;
+    } catch (e) {
+      try {
+        fs7.rmSync(temp, { force: true });
+      } catch {
+      }
+      throw e;
+    }
   }
   agents() {
     const now = Date.now();
@@ -20795,7 +21188,7 @@ var Store = class {
       ).run(claim2.taskId, fence);
       const agent2 = {
         ...claim2,
-        token: crypto2.randomBytes(32).toString("base64url"),
+        token: crypto3.randomBytes(32).toString("base64url"),
         fence,
         startedAt: Date.now(),
         expiresAt: Date.now() + claim2.ttlSeconds * 1e3,
@@ -20817,7 +21210,7 @@ var Store = class {
         const active = (claim2.role === "reviewer" ? delivery.data.workflow.find((s) => s.phase === "review") : void 0) ?? delivery.data.workflow.find((s) => s.phase === "active");
         if (active)
           this.execute({
-            commandId: crypto2.randomUUID(),
+            commandId: crypto3.randomUUID(),
             actor: claim2.agentId,
             op: "update",
             kind: "task",
@@ -20829,7 +21222,7 @@ var Store = class {
       }
       if (delivery.data.status === "planned")
         this.execute({
-          commandId: crypto2.randomUUID(),
+          commandId: crypto3.randomUUID(),
           actor: claim2.agentId,
           op: "update",
           kind: "delivery",
@@ -20841,7 +21234,7 @@ var Store = class {
       this.release(agent.token);
       throw e;
     }
-    this.changed();
+    this.changed(false);
     return agent;
   }
   heartbeat(token, activity) {
@@ -20851,13 +21244,13 @@ var Store = class {
       if (activity) agent.activity = activity.slice(0, 500);
       agent.expiresAt = Date.now() + agent.ttlSeconds * 1e3;
       this.db.prepare("UPDATE agents SET data=?,expires_at=? WHERE token=?").run(JSON.stringify(agent), agent.expiresAt, token);
-      this.changed();
+      this.changed(false);
       return agent;
     });
   }
   release(token) {
     this.db.prepare("DELETE FROM agents WHERE token=?").run(token);
-    this.changed();
+    this.changed(false);
     return { released: true };
   }
   releaseSession(sessionId) {
@@ -20914,17 +21307,34 @@ function assertAcyclic(start, next, message) {
 
 // src/server.ts
 async function startServer(root, options = {}) {
-  const store = new Store(root), token = options.token ?? crypto3.randomBytes(32).toString("base64url"), instance = crypto3.randomUUID();
-  const assets = options.assets ?? path4.join(path4.dirname(fileURLToPath2(import.meta.url)), "web");
+  root = fs8.realpathSync.native(root);
+  if (options.registry !== false) {
+    const prior = readRegistry(root);
+    if (prior)
+      assert2(
+        !await probeRegistry(prior) && (prior.writerProtocol === 2 || !processAlive(prior.pid)),
+        "SERVER_ALREADY_RUNNING",
+        "A registered Nexo process still owns this directory. Connect through the client for a graceful handoff.",
+        503
+      );
+  }
+  const store = new Store(root), token = options.token ?? crypto4.randomBytes(32).toString("base64url"), instance = crypto4.randomUUID();
+  const assets = options.assets ?? path7.join(path7.dirname(fileURLToPath2(import.meta.url)), "web");
   const clients = /* @__PURE__ */ new Set(), tickets = /* @__PURE__ */ new Map(), sessions = /* @__PURE__ */ new Map();
-  const cookieName = "nexo_" + crypto3.createHash("sha256").update(root + "\0" + store.config.id).digest("hex").slice(0, 16);
-  let origin = "", error62, flush, shuttingDown = false;
+  const cookieName = "nexo_" + crypto4.createHash("sha256").update(root + "\0" + store.config.id).digest("hex").slice(0, 16);
+  let origin = "", error62, shuttingDown = false;
+  let closing;
   const send = (res, status, body) => {
+    if (shuttingDown) res.setHeader("Connection", "close");
     res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(body));
   };
   const broadcast = () => {
     for (const res of clients) {
+      if (res.destroyed || res.writableEnded) {
+        clients.delete(res);
+        continue;
+      }
       if (res.writableLength > 65536) {
         res.destroy();
         clients.delete(res);
@@ -20932,24 +21342,14 @@ async function startServer(root, options = {}) {
         res.write(
           `id: ${instance}:${store.revision}
 event: change
-data: ${JSON.stringify({ revision: store.revision, error: error62 })}
+data: ${JSON.stringify({ revision: store.revision, error: error62, snapshot: store.snapshots.state() })}
 
 `
         );
     }
   };
-  store.onChange = () => {
-    broadcast();
-    clearTimeout(flush);
-    flush = setTimeout(() => {
-      try {
-        store.snapshot();
-      } catch (e) {
-        error62 = "Snapshot: " + String(e);
-        broadcast();
-      }
-    }, 500);
-  };
+  store.onChange = broadcast;
+  store.snapshots.onChange = broadcast;
   async function readBody(req) {
     let size = 0;
     const chunks = [];
@@ -20989,10 +21389,10 @@ data: ${JSON.stringify({ revision: store.revision, error: error62 })}
         403
       );
       if (url2.pathname === "/api/health" && req.method === "GET")
-        return send(res, 200, { instance, version: VERSION });
+        return send(res, 200, { instance, version: VERSION, draining: shuttingDown });
       const bearer = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : "";
       const candidate = Buffer.from(bearer), secret = Buffer.from(token);
-      const privileged = candidate.length === secret.length && crypto3.timingSafeEqual(candidate, secret);
+      const privileged = candidate.length === secret.length && crypto4.timingSafeEqual(candidate, secret);
       const cookie = String(req.headers.cookie ?? "").match(
         new RegExp("(?:^|;\\s*)" + cookieName + "=([a-zA-Z0-9_-]+)")
       )?.[1];
@@ -21006,7 +21406,7 @@ data: ${JSON.stringify({ revision: store.revision, error: error62 })}
           401
         );
         tickets.delete(body.ticket);
-        const session = crypto3.randomBytes(32).toString("base64url");
+        const session = crypto4.randomBytes(32).toString("base64url");
         sessions.set(session, Date.now() + 8 * 36e5);
         res.setHeader(
           "Set-Cookie",
@@ -21017,7 +21417,13 @@ data: ${JSON.stringify({ revision: store.revision, error: error62 })}
       if (url2.pathname.startsWith("/api/")) {
         assert2(privileged || loggedIn, "AUTH_REQUIRED", "Autentica\xE7\xE3o local necess\xE1ria", 401);
         if (req.method === "GET" && url2.pathname === "/api/state")
-          return send(res, 200, { ...store.state(), instance, healthError: error62 ?? null });
+          return send(res, 200, {
+            ...store.state(),
+            instance,
+            runtimeVersion: VERSION,
+            healthError: error62 ?? null,
+            snapshot: store.snapshots.state()
+          });
         if (req.method === "GET" && url2.pathname === "/api/search")
           return send(res, 200, store.search(url2.searchParams.get("q") ?? ""));
         if (req.method === "GET" && url2.pathname === "/api/events") {
@@ -21045,13 +21451,25 @@ data: {}
         );
         if (url2.pathname === "/api/shutdown") {
           send(res, 200, { ok: true });
-          setImmediate(() => void close());
+          void close().catch((e) => console.error("Nexo shutdown:", String(e)));
           return;
         }
-        assert2(!error62, "PROJECT_UNHEALTHY", error62 ?? "Erro de sincroniza\xE7\xE3o");
         const body = await readBody(req);
+        assert2(
+          !shuttingDown,
+          "SERVER_DRAINING",
+          "Nexo is draining this instance before handoff. Retry through the client.",
+          503
+        );
+        assert2(
+          !error62 || ["/api/heartbeat", "/api/release", "/api/session-end", "/api/ticket"].includes(
+            url2.pathname
+          ),
+          "PROJECT_UNHEALTHY",
+          error62 ?? "Erro de sincroniza\xE7\xE3o"
+        );
         if (url2.pathname === "/api/ticket") {
-          const ticket = crypto3.randomBytes(32).toString("base64url");
+          const ticket = crypto4.randomBytes(32).toString("base64url");
           tickets.set(ticket, Date.now() + 6e4);
           return send(res, 200, { url: origin + "/#ticket=" + ticket });
         }
@@ -21106,10 +21524,10 @@ data: {}
                 "Caminho de arquivo necess\xE1rio",
                 400
               );
-              const workspace = typeof body.workspace === "string" ? fs4.realpathSync.native(body.workspace) : root;
-              const absolute = path4.resolve(workspace, body.filePath), relative = path4.relative(workspace, absolute).replaceAll("\\", "/");
+              const workspace = typeof body.workspace === "string" ? fs8.realpathSync.native(body.workspace) : root;
+              const absolute = path7.resolve(workspace, body.filePath), relative = path7.relative(workspace, absolute).replaceAll("\\", "/");
               assert2(
-                relative && !relative.startsWith("../") && !path4.isAbsolute(relative),
+                relative && !relative.startsWith("../") && !path7.isAbsolute(relative),
                 "SCOPE_DENIED",
                 "Arquivo fora do workspace"
               );
@@ -21120,21 +21538,21 @@ data: {}
                 "SCOPE_DENIED",
                 "Arquivo fora do escopo registrado"
               );
-              let parent = path4.dirname(absolute);
+              let parent = path7.dirname(absolute);
               while (parent !== workspace) {
-                if (fs4.existsSync(parent))
+                if (fs8.existsSync(parent))
                   assert2(
-                    !fs4.lstatSync(parent).isSymbolicLink(),
+                    !fs8.lstatSync(parent).isSymbolicLink(),
                     "SYMLINK_DENIED",
                     "N\xE3o escreva atrav\xE9s de symlink"
                   );
-                const up = path4.dirname(parent);
+                const up = path7.dirname(parent);
                 if (up === parent) break;
                 parent = up;
               }
-              if (fs4.existsSync(absolute))
+              if (fs8.existsSync(absolute))
                 assert2(
-                  !fs4.lstatSync(absolute).isSymbolicLink(),
+                  !fs8.lstatSync(absolute).isSymbolicLink(),
                   "SYMLINK_DENIED",
                   "N\xE3o escreva atrav\xE9s de symlink"
                 );
@@ -21148,8 +21566,8 @@ data: {}
           return send(res, 200, { ok: true });
         }
         if (url2.pathname === "/api/snapshot") {
-          store.snapshot();
-          return send(res, 200, { ok: true });
+          await store.snapshot();
+          return send(res, 200, { ok: true, snapshot: store.snapshots.state() });
         }
         if (url2.pathname === "/api/resolve") {
           assert2(
@@ -21171,7 +21589,7 @@ data: {}
       };
       const entry = files[url2.pathname];
       assert2(entry, "NOT_FOUND", "Arquivo n\xE3o encontrado", 404);
-      const content = fs4.readFileSync(path4.join(assets, entry[0]));
+      const content = fs8.readFileSync(path7.join(assets, entry[0]));
       res.writeHead(200, { "Content-Type": entry[1] });
       res.end(req.method === "HEAD" ? void 0 : content);
     } catch (e) {
@@ -21185,16 +21603,30 @@ data: {}
   server.requestTimeout = 15e3;
   server.headersTimeout = 1e4;
   server.maxHeadersCount = 50;
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(options.port ?? 0, "127.0.0.1", () => resolve());
-  });
-  const port = server.address().port;
-  origin = `http://127.0.0.1:${port}`;
-  const registry2 = { version: 1, pid: process.pid, instance, port, token, root };
-  if (options.registry !== false)
-    atomicWrite(path4.join(localDir(root), "server.json"), JSON.stringify(registry2));
-  store.snapshot();
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(options.port ?? 0, "127.0.0.1", () => resolve());
+    });
+    const port2 = server.address().port;
+    origin = `http://127.0.0.1:${port2}`;
+    const registry3 = {
+      version: 1,
+      writerProtocol: 2,
+      runtimeVersion: VERSION,
+      pid: process.pid,
+      instance,
+      port: port2,
+      token,
+      root
+    };
+    if (options.registry !== false)
+      atomicWrite(path7.join(localDir(root), "server.json"), JSON.stringify(registry3));
+  } catch (e) {
+    await new Promise((resolve) => server.close(() => resolve()));
+    store.close();
+    throw e;
+  }
   const synchronize = () => {
     try {
       const config2 = loadConfig(root);
@@ -21205,7 +21637,7 @@ data: {}
       );
       if (JSON.stringify(config2) !== JSON.stringify(store.config)) {
         store.config = config2;
-        store.changed();
+        store.changed(false);
       }
       store.sync();
       store.readResolutions();
@@ -21222,12 +21654,22 @@ data: {}
     }
   };
   let reconcile;
-  const watcher = fs4.watch(store.eventsDir, () => {
-    clearTimeout(reconcile);
-    reconcile = setTimeout(synchronize, 150);
-  });
+  let watcher;
+  try {
+    watcher = fs8.watch(store.eventsDir, () => {
+      clearTimeout(reconcile);
+      reconcile = setTimeout(synchronize, 150);
+    });
+  } catch (e) {
+    await new Promise((resolve) => server.close(() => resolve()));
+    if (options.registry !== false)
+      fs8.rmSync(path7.join(localDir(root), "server.json"), { force: true });
+    store.close();
+    throw e;
+  }
   const periodic = setInterval(() => {
     synchronize();
+    store.snapshots.verify();
     broadcast();
     for (const [k, expiry] of tickets) if (expiry < Date.now()) tickets.delete(k);
     for (const [k, expiry] of sessions) if (expiry < Date.now()) sessions.delete(k);
@@ -21237,24 +21679,50 @@ data: {}
     for (const res of clients) res.write(": heartbeat\n\n");
   }, 15e3);
   heartbeat.unref();
-  async function close() {
-    if (shuttingDown) return;
+  function close() {
+    if (closing) return closing;
     shuttingDown = true;
-    clearTimeout(flush);
-    clearTimeout(reconcile);
-    clearInterval(periodic);
-    clearInterval(heartbeat);
-    watcher.close();
-    for (const client of clients) client.end();
-    store.snapshot();
-    await new Promise((resolve) => server.close(() => resolve()));
-    store.close();
-    const file2 = path4.join(localDir(root), "server.json");
-    try {
-      if (JSON.parse(fs4.readFileSync(file2, "utf8")).instance === instance) fs4.rmSync(file2);
-    } catch {
-    }
+    closing = (async () => {
+      store.snapshots.pause();
+      clearTimeout(reconcile);
+      clearInterval(periodic);
+      clearInterval(heartbeat);
+      watcher.close();
+      for (const client of clients) client.end();
+      clients.clear();
+      const drained = new Promise((resolve) => server.close(() => resolve()));
+      server.closeIdleConnections();
+      await drained;
+      try {
+        await store.snapshot();
+      } catch (e) {
+        console.error(
+          "Nexo snapshot pending at shutdown; live SQLite/outbox preserved:",
+          String(e)
+        );
+      }
+      const file2 = path7.join(localDir(root), "server.json");
+      try {
+        if (options.registry !== false && JSON.parse(fs8.readFileSync(file2, "utf8")).instance === instance)
+          fs8.rmSync(file2);
+      } catch {
+      }
+      store.close();
+    })();
+    return closing;
   }
+  store.snapshots.start();
+  const port = server.address().port;
+  const registry2 = {
+    version: 1,
+    writerProtocol: 2,
+    runtimeVersion: VERSION,
+    pid: process.pid,
+    instance,
+    port,
+    token,
+    root
+  };
   return { server, store, registry: registry2, origin, close };
 }
 
@@ -21297,19 +21765,19 @@ async function main() {
     return;
   }
   if (action === "run") {
-    const root = findProject(cwd), workspace = fs5.realpathSync(flag("--workspace") ?? root), taskId = flag("--task"), promptFile = flag("--prompt-file");
+    const root = findProject(cwd), workspace = fs9.realpathSync(flag("--workspace") ?? root), taskId = flag("--task"), promptFile = flag("--prompt-file");
     if (!taskId || !promptFile)
       throw new Error(
         "run exige --task <id> --prompt-file <arquivo> --scope <caminho relativo> [--workspace <worktree>]"
       );
-    const prompt = fs5.readFileSync(promptFile, "utf8");
+    const prompt = fs9.readFileSync(promptFile, "utf8");
     if (prompt.length > 1e5) throw new Error("Prompt excede 100 KiB");
     const scopes = (flag("--scope") ?? "").split(",").filter(Boolean);
     if (!scopes.length) throw new Error("Informe escopos de escrita expl\xEDcitos com --scope");
     const budget = Number(flag("--max-budget-usd") ?? 10);
     if (!Number.isFinite(budget) || budget <= 0 || budget > 1e3)
       throw new Error("Budget deve estar entre 0 e 1000 USD");
-    const sessionId = crypto4.randomUUID();
+    const sessionId = crypto5.randomUUID();
     const actor = await request(
       "claim",
       {
@@ -21323,7 +21791,7 @@ async function main() {
       },
       root
     );
-    const runtime = path5.dirname(fileURLToPath3(import.meta.url)), plugin = path5.dirname(runtime);
+    const runtime = path8.dirname(fileURLToPath3(import.meta.url)), plugin = path8.dirname(runtime);
     const child = spawn2(
       process.env.NEXO_CLAUDE_BIN ?? "claude",
       [
@@ -21378,13 +21846,16 @@ ${prompt}`
           node: process.version,
           project: config2,
           healthError: state.healthError,
+          runtimeVersion: state.runtimeVersion,
+          snapshot: state.snapshot,
           conflicts: state.conflicts,
           eventCount: state.eventCount,
           agents: state.agents,
           checks: {
             loopback: true,
-            sqliteSnapshot: fs5.existsSync(path5.join(root, ".nexo", "project.sqlite")),
-            projectAlias: fs5.existsSync(path5.join(root, ".claude", "commands", "board.md"))
+            exclusiveWriter: true,
+            sqliteSnapshot: fs9.existsSync(path8.join(root, ".nexo", "project.sqlite")),
+            projectAlias: fs9.existsSync(path8.join(root, ".claude", "commands", "board.md"))
           }
         },
         null,

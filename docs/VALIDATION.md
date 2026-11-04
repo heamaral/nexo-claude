@@ -1,5 +1,11 @@
 # Evidência de validação
 
+## rc.3 — concorrência e publicação de snapshots (2026-11-03)
+
+Windows, Node 24.22.1, Claude Code 2.1.316: 29 testes Node e 2 cenários de navegador passaram. Os novos testes incluem lock de escritor entre processos, liberação após crash real, startup sem roubo por idade, recuperação de outbox, 40 chamadas de snapshot em duas gerações, falha persistente com deadline, restauração do binário alterado pelo Git, aviso não fatal com retomada automática, shutdown com erro e rejeição de uma mutação cujo corpo ainda estava chegando. Um handle real do Windows sem `FILE_SHARE_DELETE` reproduziu a falha de substituição, permitiu heartbeat e liberou a publicação ao ser fechado.
+
+Um ensaio local adicional usou o runtime **instalado** rc.2 e três clientes rc.3 simultâneos em um projeto isolado. A instância foi substituída uma única vez; entrega/card e token da lease original continuaram válidos. Um cliente rc.2 reutilizou o daemon rc.3. Nenhum processo de projeto existente foi encerrado. Tipos, formatação e validação oficial de plugin/marketplace passaram. Resultados multiplataforma do commit de publicação ficam registrados no CI.
+
 Execução local em 2026-11-02, Windows, Node 24.22.1 e Claude Code 2.1.316. Estes resultados descrevem o ambiente testado; não são uma garantia de desempenho para qualquer máquina ou volume.
 
 ## Testes reais do Claude
