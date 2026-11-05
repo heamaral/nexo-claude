@@ -164,31 +164,31 @@ export function DeliveryGraph({
     ) : null;
   const dependencies = tasks.reduce((count, task) => count + task.data.dependencies.length, 0);
   return (
-    <section className="delivery-graph" aria-label="Mapa de tarefas da entrega">
+    <section className="delivery-graph" aria-label="Delivery task map">
       <div className="section-intro">
         <div>
-          <h2>Do primeiro passo ao resultado</h2>
+          <h2>From the first step to the result</h2>
           <p>
             {mode === 'flow'
-              ? 'Pré-requisitos à esquerda, próximos passos à direita. Clique para inspecionar.'
-              : 'Da entrega às tarefas e subtarefas. A composição não define a ordem de execução.'}
+              ? 'Prerequisites on the left, next steps on the right. Click to inspect.'
+              : 'From the delivery to tasks and subtasks. Composition does not define execution order.'}
           </p>
         </div>
         <span className="pill">
           <GitBranch />
-          {dependencies} dependências · {tasks.length} cards
+          {dependencies} dependencies · {tasks.length} cards
         </span>
       </div>
       <div className="graph-panel" ref={panel}>
         <div className="graph-toolbar">
-          <div className="graph-modes" role="group" aria-label="Organização do mapa">
+          <div className="graph-modes" role="group" aria-label="Map organization">
             <button aria-pressed={mode === 'flow'} onClick={() => setMode('flow')}>
               <GitBranch />
-              Dependências
+              Dependencies
             </button>
             <button aria-pressed={mode === 'hierarchy'} onClick={() => setMode('hierarchy')}>
               <Layers />
-              Hierarquia
+              Hierarchy
             </button>
           </div>
           <div className="graph-controls">
@@ -199,34 +199,30 @@ export function DeliveryGraph({
                 onClick={() => fit(matches)}
               >
                 <Search />
-                {matches.size} encontrados
+                {matches.size} {matches.size === 1 ? 'match' : 'matches'}
               </button>
             )}
-            <button
-              className="icon-button"
-              aria-label="Diminuir zoom"
-              onClick={() => zoom(1 / 1.2)}
-            >
+            <button className="icon-button" aria-label="Zoom out" onClick={() => zoom(1 / 1.2)}>
               <Minus />
             </button>
             <button
               className="graph-zoom"
               aria-live="polite"
-              aria-label="Restaurar zoom 100%"
+              aria-label="Reset zoom to 100%"
               title="Zoom 100%"
               onClick={() => zoom(1 / camera.scale)}
             >
               {Math.round(camera.scale * 100)}%
             </button>
-            <button className="icon-button" aria-label="Aumentar zoom" onClick={() => zoom(1.2)}>
+            <button className="icon-button" aria-label="Zoom in" onClick={() => zoom(1.2)}>
               <Plus />
             </button>
-            <button className="icon-button" aria-label="Ajustar mapa à tela" onClick={() => fit()}>
+            <button className="icon-button" aria-label="Fit map to view" onClick={() => fit()}>
               <Focus />
             </button>
             <button
               className="icon-button"
-              aria-label="Alternar tela cheia do mapa"
+              aria-label="Toggle map fullscreen"
               onClick={() => {
                 if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
                 else void panel.current?.requestFullscreen().catch(() => {});
@@ -238,14 +234,14 @@ export function DeliveryGraph({
         </div>
         {!!layout.cyclic.length && (
           <p role="alert" className="graph-warning">
-            Há relações cíclicas no histórico. Revise o plano no Claude antes de executar.
+            History contains cyclic relationships. Review the plan in Claude before starting work.
           </p>
         )}
         <div
           className={'graph-viewport' + (dragging ? ' dragging' : '')}
           ref={viewport}
           tabIndex={0}
-          aria-label="Grafo interativo. Arraste para mover; use mais e menos para zoom e zero para ajustar."
+          aria-label="Interactive graph. Drag to pan; use plus and minus to zoom and zero to fit."
           onKeyDown={(e) => {
             if (e.target !== viewport.current) return;
             if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -372,7 +368,7 @@ export function DeliveryGraph({
                     d={path}
                   >
                     <title>
-                      {edge.kind === 'dependency' ? 'Depende de' : 'Contribui para'}:{' '}
+                      {edge.kind === 'dependency' ? 'Depends on' : 'Contributes to'}:{' '}
                       {index.get(edge.from)?.data.title ?? edge.from} →{' '}
                       {index.get(edge.to)?.data.title ?? delivery.data.title}
                     </title>
@@ -392,12 +388,12 @@ export function DeliveryGraph({
                 (a) => a.state === 'working' && a.taskId === node.id,
               ).length;
               const label = goal
-                ? 'Entrega final'
+                ? 'Delivery outcome'
                 : blocked
-                  ? 'Bloqueado'
+                  ? 'Blocked'
                   : active
-                    ? 'Em execução'
-                    : (phase(entity)?.name ?? 'Aguardando');
+                    ? 'Running'
+                    : (phase(entity)?.name ?? 'Waiting');
               return (
                 <button
                   key={node.id}
@@ -426,7 +422,7 @@ export function DeliveryGraph({
                   onMouseLeave={() => setHovered(null)}
                   onFocus={() => setHovered(node.id)}
                   onBlur={() => setHovered(null)}
-                  aria-label={`${entity?.data.title ?? node.id}. ${completed ? 'Concluído' : label}. ${node.kind === 'external' ? 'Outra entrega.' : ''}`}
+                  aria-label={`${entity?.data.title ?? node.id}. ${completed ? 'Completed' : label}. ${node.kind === 'external' ? 'Another delivery.' : ''}`}
                   title={entity?.data.title ?? node.id}
                 >
                   {orbit(active)}
@@ -440,7 +436,7 @@ export function DeliveryGraph({
                     ) : (
                       <Box />
                     )}
-                    <span>{goal ? 'RESULTADO DA ENTREGA' : node.id}</span>
+                    <span>{goal ? 'DELIVERY OUTCOME' : node.id}</span>
                     {node.kind === 'external' && <ArrowUpRight />}
                   </div>
                   <h3>{entity?.data.title ?? node.id}</h3>
@@ -458,20 +454,20 @@ export function DeliveryGraph({
                     ) : (
                       <Clock3 />
                     )}
-                    {completed ? 'Concluído' : label}
+                    {completed ? 'Completed' : label}
                   </span>
                   <div className="graph-node-context">
                     {goal ? (
                       <>
                         <Target />
                         {delivery.data.status === 'accepted'
-                          ? 'Resultado preservado'
-                          : 'Objetivo desta entrega'}
+                          ? 'Preserved result'
+                          : 'Goal of this delivery'}
                       </>
                     ) : node.kind === 'external' ? (
                       <>
                         <ArrowUpRight />
-                        Dependência de outra entrega
+                        Dependency from another delivery
                       </>
                     ) : (
                       <>
@@ -479,8 +475,8 @@ export function DeliveryGraph({
                         <span>
                           {team?.data.title ??
                             (childIds.has(node.id)
-                              ? `${childIds.get(node.id)!.length} subtarefas`
-                              : 'Tarefa da entrega')}
+                              ? `${childIds.get(node.id)!.length} subtasks`
+                              : 'Delivery task')}
                         </span>
                         {count > 0 && <i className="live-dot" />}
                       </>
@@ -491,21 +487,21 @@ export function DeliveryGraph({
             })}
           </div>
           {!tasks.length && (
-            <p className="graph-empty">O planner ainda não registrou tarefas nesta entrega.</p>
+            <p className="graph-empty">The planner has not recorded tasks for this delivery yet.</p>
           )}
         </div>
         <div className="graph-legend">
           {mode === 'flow' && (
             <span>
               <i className="legend-line dependency" />
-              Dependência
+              Dependency
             </span>
           )}
           <span>
             <i className="legend-line composition" />
-            {mode === 'flow' ? 'Contribui para o resultado' : 'Composição: pai → filho'}
+            {mode === 'flow' ? 'Contributes to the result' : 'Composition: parent → child'}
           </span>
-          <span className="graph-gesture">Arraste para mover · Ctrl + rolagem para zoom</span>
+          <span className="graph-gesture">Drag to pan · Ctrl + scroll to zoom</span>
         </div>
       </div>
     </section>

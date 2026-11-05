@@ -8,7 +8,7 @@ Nexo is a local Claude Code plugin with a live browser board for deliveries, hie
 
 ![Example delivery dependency graph in dark mode](docs/graph-dark.png)
 
-_Screenshots use example project data. The interface currently uses Portuguese; agent instructions and project scaffolding use English, and agents respond in your language._
+_Screenshots use example project data. The interface, instructions and project scaffolding use English. Agents respond in your language._
 
 ## From a delivery to the agents working on it
 
@@ -135,7 +135,7 @@ pnpm test:browser
 pnpm validate:plugin
 ```
 
-Source lives in `src/`; the bundled marketplace runtime lives in `plugins/nexo/runtime/`. [API](docs/API.md), [language policy](docs/LANGUAGE.md), and [concurrency and recovery](docs/CONCURRENCY.md) describe the current implementation. Some detailed documentation is currently in Portuguese.
+Source lives in `src/`; the bundled marketplace runtime lives in `plugins/nexo/runtime/`. [API](docs/API.md), [language policy](docs/LANGUAGE.md), and [concurrency and recovery](docs/CONCURRENCY.md) describe the current implementation. The documentation and example screenshots use English.
 
 ## License
 

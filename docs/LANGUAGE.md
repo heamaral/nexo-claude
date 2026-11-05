@@ -4,7 +4,7 @@ Technical instructions, skills and generated project rules use English. Conversa
 
 Instructions are scaffolded in `.claude/rules/nexo.md`, with the `/board` alias in `.claude/commands/board.md`. `.nexo/` stores data. English instructions do not require English project content.
 
-The board interface currently uses Portuguese. A message catalog and locale selection are separate future work; this change does not make the UI multilingual or migrate existing rules.
+The board interface, accessibility labels, runtime diagnostics, default workflow labels, documentation and example screenshots use English. Existing project records and custom workflows retain their saved language. A message catalog and locale selection remain separate future work; this release is English by default, not a multilingual UI.
 
 ## MCP naming
 

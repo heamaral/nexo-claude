@@ -110,8 +110,8 @@ function App() {
         if (!response.ok)
           throw new Error(
             response.status === 401
-              ? 'Abra /board no Claude para autenticar esta janela.'
-              : 'Não foi possível consultar o projeto.',
+              ? 'Open /board in Claude to authenticate this window.'
+              : 'Could not read the project.',
           );
         const data = await response.json();
         if (!stopped) {
@@ -138,7 +138,7 @@ function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ticket }),
           });
-          if (!r.ok) throw new Error('Link expirado. Execute /board novamente no Claude.');
+          if (!r.ok) throw new Error('Link expired. Run /board again in Claude.');
         }
         await refresh();
         if (stopped) return;
@@ -240,11 +240,7 @@ function App() {
         ) : (
           <Clock3 />
         )}
-        {t.data.blocker
-          ? 'Bloqueado'
-          : a.length
-            ? 'Em execução'
-            : (stage(t)?.name ?? t.data.status)}
+        {t.data.blocker ? 'Blocked' : a.length ? 'Running' : (stage(t)?.name ?? t.data.status)}
       </span>
     );
   };
@@ -258,7 +254,7 @@ function App() {
             <small>%</small>
           </strong>
           <span>
-            {p.completed} de {p.total} tarefas
+            {p.completed} of {p.total} tasks
           </span>
         </div>
         <div
@@ -267,7 +263,7 @@ function App() {
           aria-valuenow={p.percent}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Progresso das tarefas"
+          aria-label="Task progress"
         >
           <span style={{ width: p.percent + '%' }} />
         </div>
@@ -308,7 +304,7 @@ function App() {
               ))}
             </div>
             <small>
-              {progress(sub).completed}/{progress(sub).total} subtarefas concluídas
+              {progress(sub).completed}/{progress(sub).total} subtasks completed
             </small>
           </>
         )}
@@ -322,7 +318,7 @@ function App() {
             ) : (
               <>
                 <Box />
-                {t.data.parentId ? 'Subtarefa' : 'Tarefa'}
+                {t.data.parentId ? 'Subtask' : 'Task'}
               </>
             )}
           </span>
@@ -330,7 +326,7 @@ function App() {
             {a.length ? (
               <>
                 <i className="live-dot" />
-                {a.length} {a.length === 1 ? 'agente' : 'agentes'}
+                {a.length} {a.length === 1 ? 'agent' : 'agents'}
               </>
             ) : t.data.dependencies.length ? (
               <>
@@ -374,7 +370,7 @@ function App() {
             </button>
           </div>
           <span className={'pill ' + (a.state === 'working' ? 'active' : 'warning')}>
-            {a.state === 'working' ? 'Trabalhando' : 'Sem contato'}
+            {a.state === 'working' ? 'Working' : 'Lost contact'}
           </span>
         </div>
         {agents
@@ -383,7 +379,7 @@ function App() {
       </React.Fragment>
     );
   }
-  const title = all ? 'Todos os cards' : (delivery?.data.title ?? 'Entregas');
+  const title = all ? 'All cards' : (delivery?.data.title ?? 'Deliveries');
   return (
     <div className="app">
       <aside className="sidebar">
@@ -405,20 +401,20 @@ function App() {
             {state?.project.name.slice(0, 1).toUpperCase() ?? 'N'}
           </span>
           <div>
-            <strong>{state?.project.name ?? 'Carregando projeto'}</strong>
-            <span>Workspace do projeto</span>
+            <strong>{state?.project.name ?? 'Loading project'}</strong>
+            <span>Project workspace</span>
           </div>
         </div>
-        <nav aria-label="Navegação principal">
+        <nav aria-label="Main navigation">
           <button className={!delivery && !all ? 'selected' : ''} onClick={() => choose(null)}>
             <Layers />
-            Entregas<span className="count">{deliveries.length}</span>
+            Deliveries<span className="count">{deliveries.length}</span>
           </button>
           <button className={all ? 'selected' : ''} onClick={() => choose(null, true)}>
             <Columns3 />
-            Todos os cards<span className="count">{tasks.length}</span>
+            All cards<span className="count">{tasks.length}</span>
           </button>
-          <div className="nav-label">ENTREGAS DO PROJETO</div>
+          <div className="nav-label">PROJECT DELIVERIES</div>
           {deliveries.slice(0, 30).map((d) => (
             <button
               key={d.id}
@@ -444,23 +440,23 @@ function App() {
           <button className="policy" onClick={() => open({ type: 'policy', id: '' })}>
             <ShieldCheck />
             <span>
-              Coordenação por projeto<small>Capacidade e isolamento</small>
+              Project coordination<small>Capacity and isolation</small>
             </span>
             <ChevronRight />
           </button>
           <div className="local-status">
             <Database />
-            .nexo/ · Local e versionável
+            .nexo/ · Local and versioned
           </div>
         </div>
       </aside>
       <main>
         <header className="topbar">
           <div className="breadcrumb">
-            <span>{state?.project.name ?? 'Projeto'}</span>
+            <span>{state?.project.name ?? 'Project'}</span>
             <ChevronRight />
             {delivery ? (
-              <button onClick={() => choose(null)}>Entregas</button>
+              <button onClick={() => choose(null)}>Deliveries</button>
             ) : (
               <span>Workspace</span>
             )}
@@ -475,14 +471,14 @@ function App() {
             <span className={'connection ' + connection}>
               {connection === 'online' ? <i className="live-dot" /> : <WifiOff />}
               {connection === 'online'
-                ? 'Ao vivo'
+                ? 'Live'
                 : connection === 'reconnecting'
-                  ? 'Reconectando'
-                  : 'Conectando'}
+                  ? 'Reconnecting'
+                  : 'Connecting'}
             </span>
             <button
               className="icon-button"
-              aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             >
               {theme === 'dark' ? <Sun /> : <Moon />}
@@ -496,15 +492,15 @@ function App() {
               <div>
                 <strong>
                   {state?.conflicts.length
-                    ? 'Conflito no histórico do projeto'
+                    ? 'Project history conflict'
                     : state?.healthError
-                      ? 'Sincronização precisa de atenção'
-                      : 'Conexão indisponível'}
+                      ? 'Synchronization needs attention'
+                      : 'Connection unavailable'}
                 </strong>
                 <p>
                   {error ||
                     state?.healthError ||
-                    `${state?.conflicts.length} evento(s) divergente(s). Execute /nexo:doctor para revisar antes de continuar.`}
+                    `${state?.conflicts.length} divergent event(s). Run /nexo:doctor to review before continuing.`}
                 </p>
               </div>
             </div>
@@ -513,11 +509,11 @@ function App() {
             <div className="snapshot-warning" role="status">
               <Database />
               <div>
-                <strong>Snapshot aguardando publicação</strong>
+                <strong>Snapshot awaiting publication</strong>
                 <p>
-                  Os cards e agentes continuam salvos no banco local. O Nexo tentará publicar o
-                  arquivo novamente. Antes de um commit, execute snapshot e aguarde a confirmação.
-                  Código: {state.snapshot.lastError.code}.
+                  Cards and agents remain saved in the local database. Nexo will retry publication
+                  automatically. Before committing, run snapshot and wait for confirmation. Code:{' '}
+                  {state.snapshot.lastError.code}.
                 </p>
               </div>
             </div>
@@ -525,20 +521,20 @@ function App() {
           <div className="heading">
             <div>
               <span className="eyebrow">
-                {all ? 'VISÃO DO PROJETO' : delivery ? 'ENTREGA DO PROJETO' : 'DO PLANO À ENTREGA'}
+                {all ? 'PROJECT OVERVIEW' : delivery ? 'PROJECT DELIVERY' : 'FROM PLAN TO DELIVERY'}
               </span>
               <h1>{title}</h1>
               <p>
                 {delivery?.data.description ??
                   (all
-                    ? 'Cada card mantém seu contexto, suas dependências e seus agentes.'
-                    : 'Cada entrega tem seu plano, seus times e um resultado preservado.')}
+                    ? 'Every card keeps its context, dependencies and agents.'
+                    : 'Every delivery has its own plan, teams and preserved result.')}
               </p>
             </div>
             {delivery && (
               <button className="button" onClick={() => open({ type: 'entity', id: delivery.id })}>
                 <Target />
-                Status da entrega
+                Delivery status
                 <ArrowUpRight />
               </button>
             )}
@@ -552,34 +548,34 @@ function App() {
                   >
                     {delivery.data.status === 'accepted' ? <CheckCheck /> : <Target />}
                     {delivery.data.status === 'accepted'
-                      ? 'Entrega aceita'
+                      ? 'Accepted delivery'
                       : delivery.data.status === 'active'
-                        ? 'Em andamento'
-                        : 'Planejada'}
+                        ? 'In progress'
+                        : 'Planned'}
                   </span>
                   <div className="summary-stats">
                     <span>
                       <Box />
-                      {leaves(selectedTasks).length} tarefas
+                      {leaves(selectedTasks).length} tasks
                     </span>
                     <span>
                       <Users />
-                      {active(selectedTasks).length} agentes trabalhando
+                      {active(selectedTasks).length} agents working
                     </span>
                     <span>
                       <OctagonX />
-                      {selectedTasks.filter((t) => t.data.blocker).length} impedimentos
+                      {selectedTasks.filter((t) => t.data.blocker).length} blockers
                     </span>
                   </div>
                 </div>
                 {track(selectedTasks)}
               </div>
               <div className="toolbar">
-                <div className="tabs" role="tablist" aria-label="Visões da entrega">
+                <div className="tabs" role="tablist" aria-label="Delivery views">
                   {[
                     ['board', 'Board', Columns3],
-                    ['teams', 'Times', Network],
-                    ['path', 'Caminho', Route],
+                    ['teams', 'Teams', Network],
+                    ['path', 'Graph', Route],
                   ].map(([id, label, Icon]) => (
                     <button
                       key={String(id)}
@@ -601,7 +597,7 @@ function App() {
                   onClick={() => open({ type: 'flow', id: delivery.id })}
                 >
                   <Workflow />
-                  Ver fluxo
+                  View workflow
                 </button>
               </div>
             </>
@@ -612,8 +608,8 @@ function App() {
                 <Search />
                 <input
                   ref={search}
-                  placeholder="Buscar cards…"
-                  aria-label="Buscar cards"
+                  placeholder="Search cards…"
+                  aria-label="Search cards"
                   value={query}
                   onChange={(e) => {
                     setQuery(e.target.value);
@@ -624,7 +620,7 @@ function App() {
                 {query && (
                   <button
                     className="icon-button"
-                    aria-label="Limpar busca"
+                    aria-label="Clear search"
                     onClick={() => setQuery('')}
                   >
                     <X />
@@ -632,7 +628,7 @@ function App() {
                 )}
               </div>
               <span>
-                {shown.length} cards{shown.length > limit ? ` · exibindo ${limit}` : ''}
+                {shown.length} cards{shown.length > limit ? ` · showing ${limit}` : ''}
               </span>
             </div>
           )}
@@ -644,33 +640,33 @@ function App() {
                     <Target />
                   </span>
                   <strong>{deliveries.filter((d) => d.data.status !== 'accepted').length}</strong>
-                  <small>entregas abertas</small>
+                  <small>open deliveries</small>
                 </span>
                 <span>
                   <span className="stat-icon">
                     <Activity />
                   </span>
                   <strong>{agents.filter((a) => a.state === 'working').length}</strong>
-                  <small>agentes trabalhando</small>
+                  <small>agents working</small>
                 </span>
                 <span>
                   <span className="stat-icon done">
                     <CheckCheck />
                   </span>
                   <strong>{deliveries.filter((d) => d.data.status === 'accepted').length}</strong>
-                  <small>entregas aceitas</small>
+                  <small>accepted deliveries</small>
                 </span>
               </div>
               {!deliveries.length ? (
                 <div className="empty">
                   <Layers />
-                  <h2>O próximo passo começa aqui.</h2>
+                  <h2>Your next step starts here.</h2>
                   <p>
-                    Peça ao Claude para planejar uma entrega. Ele organiza os cards, as dependências
-                    e os times neste projeto.
+                    Ask Claude to plan a delivery. It organizes the cards, dependencies and teams in
+                    this project.
                   </p>
-                  <code>/nexo:plan descreva o que você quer entregar</code>
-                  <small>O board acompanha o trabalho em tempo real.</small>
+                  <code>/nexo:plan describe what you want to deliver</code>
+                  <small>The board follows work in real time.</small>
                 </div>
               ) : (
                 <div className="portfolio">
@@ -709,30 +705,28 @@ function App() {
                                 <Clock3 />
                               )}
                               {d.data.status === 'accepted'
-                                ? 'Aceita'
+                                ? 'Accepted'
                                 : running.length
-                                  ? 'Em execução'
-                                  : 'Planejada'}
+                                  ? 'Running'
+                                  : 'Planned'}
                             </span>
                           </div>
                           <h2>{d.data.title}</h2>
-                          <p>
-                            {d.data.description || 'Escopo organizado pelo planner do projeto.'}
-                          </p>
+                          <p>{d.data.description || 'Scope organized by the project planner.'}</p>
                         </button>
                         {track(items)}
                         <div className="delivery-meta">
                           <span>
                             <Users />
-                            {running.length} agentes
+                            {running.length} agents
                           </span>
                           <span>
                             <Network />
-                            {teams.filter((t) => t.data.deliveryId === d.id).length} times
+                            {teams.filter((t) => t.data.deliveryId === d.id).length} teams
                           </span>
                         </div>
                         <button className="button primary" onClick={() => choose(d.id)}>
-                          Abrir entrega
+                          Open delivery
                           <ArrowUpRight />
                         </button>
                       </article>
@@ -763,7 +757,7 @@ function App() {
                         .slice(0, limit)
                         .map(card)}
                       {!shown.some((t) => t.data.stageId === s.id) && (
-                        <div className="column-empty">Nenhum card nesta etapa</div>
+                        <div className="column-empty">No cards in this stage</div>
                       )}
                     </div>
                   </section>
@@ -774,12 +768,12 @@ function App() {
             <>
               <div className="section-intro">
                 <div>
-                  <h2>Times que movem esta entrega</h2>
-                  <p>Escopos claros, execução em paralelo e integração no final.</p>
+                  <h2>Teams moving this delivery forward</h2>
+                  <p>Clear scopes, parallel execution and integration at the end.</p>
                 </div>
                 <span className="pill">
                   <ShieldCheck />
-                  Até {state?.project.maxTeamsPerDelivery} times simultâneos
+                  Up to {state?.project.maxTeamsPerDelivery} concurrent teams
                 </span>
               </div>
               <div className="teams-grid">
@@ -804,7 +798,7 @@ function App() {
                             </span>
                             <span className={'pill ' + (working.length ? 'active' : '')}>
                               {working.length ? <Activity /> : <Clock3 />}
-                              {working.length ? 'Em execução' : 'Aguardando'}
+                              {working.length ? 'Running' : 'Waiting'}
                             </span>
                           </div>
                           <h2>{team.data.title}</h2>
@@ -817,13 +811,13 @@ function App() {
                                 !a.parentAgentId || !ta.some((p) => p.agentId === a.parentAgentId),
                             )
                             .map((a) => agentRow(a))}
-                          {!ta.length && <p className="muted">Nenhum agente ativo neste time.</p>}
+                          {!ta.length && <p className="muted">No active agents on this team.</p>}
                         </div>
                         <button
                           className="text-link"
                           onClick={() => open({ type: 'entity', id: team.id })}
                         >
-                          Ver escopo e tarefas
+                          View scope and tasks
                           <ArrowUpRight />
                         </button>
                       </article>
@@ -836,10 +830,10 @@ function App() {
               {!teams.some((t) => t.data.deliveryId === delivery.id) && (
                 <div className="empty small">
                   <Network />
-                  <h2>Um plano, vários caminhos possíveis.</h2>
+                  <h2>One plan, multiple paths forward.</h2>
                   <p>
-                    O planner cria times conforme a independência das tarefas. Agentes entram aqui
-                    quando assumem um card.
+                    The planner creates teams for independent tasks. Agents appear here when they
+                    claim a card.
                   </p>
                 </div>
               )}
@@ -858,17 +852,17 @@ function App() {
           {(((all || (delivery && view === 'board')) && shown.length > limit) ||
             (deliveries.length > limit && !delivery && !all)) && (
             <button className="button load-more" onClick={() => setLimit((n) => n + 60)}>
-              Carregar mais
+              Load more
             </button>
           )}
           <footer>
             <span>
               <Database />
-              {state?.eventCount ?? 0} eventos persistidos · SQLite + histórico
+              {state?.eventCount ?? 0} persisted events · SQLite + history
             </span>
             <span>
               <ShieldCheck />
-              Entregas aceitas preservam seu histórico
+              Accepted deliveries preserve their history
             </span>
           </footer>
         </div>
@@ -897,7 +891,7 @@ function App() {
           {history.length > 1 && (
             <button
               className="icon-button"
-              aria-label="Voltar no detalhe"
+              aria-label="Back to previous details"
               onClick={() => setHistory((h) => h.slice(0, -1))}
             >
               <ArrowLeft />
@@ -905,65 +899,58 @@ function App() {
           )}
           <span>
             {detail?.type === 'flow'
-              ? 'FLUXO DA ENTREGA'
+              ? 'DELIVERY WORKFLOW'
               : detail?.type === 'policy'
-                ? 'COORDENAÇÃO DO PROJETO'
+                ? 'PROJECT COORDINATION'
                 : entity?.kind === 'delivery'
-                  ? 'ENTREGA'
+                  ? 'DELIVERY'
                   : entity?.kind === 'team'
-                    ? 'TIME'
+                    ? 'TEAM'
                     : 'CARD'}
           </span>
-          <button
-            className="icon-button"
-            aria-label="Fechar detalhe"
-            onClick={() => setHistory([])}
-          >
+          <button className="icon-button" aria-label="Close details" onClick={() => setHistory([])}>
             <X />
           </button>
         </div>
         <div className="modal-content">
           <h2 id="detail-title">
             {detail?.type === 'flow'
-              ? 'Um fluxo que acompanha o projeto'
+              ? 'A workflow that fits the project'
               : detail?.type === 'policy'
-                ? 'Paralelismo com contexto'
-                : (entity?.data.title ?? 'Detalhe indisponível')}
+                ? 'Parallel work with context'
+                : (entity?.data.title ?? 'Details unavailable')}
           </h2>
           {detail?.type === 'policy' ? (
             <>
-              <p>
-                Os limites abaixo pertencem a este projeto. Eles incluem todos os agentes
-                registrados no Nexo.
-              </p>
+              <p>These limits belong to this project and include all agents registered in Nexo.</p>
               <div className="info-grid">
                 <div>
-                  <small>Agentes simultâneos</small>
+                  <small>Concurrent agents</small>
                   <strong>{state?.project.maxAgents}</strong>
                 </div>
                 <div>
-                  <small>Times por entrega</small>
+                  <small>Teams per delivery</small>
                   <strong>{state?.project.maxTeamsPerDelivery}</strong>
                 </div>
               </div>
-              <h3>Como o trabalho é coordenado</h3>
+              <h3>How work is coordinated</h3>
               <ul>
-                <li>Um executor por card, com colaboradores e revisores explícitos.</li>
-                <li>Escopos de escrita sobrepostos aguardam a liberação.</li>
-                <li>Leases expiradas aparecem como “sem contato”; isso não conclui o card.</li>
-                <li>Times independentes usam sessões e worktrees separados.</li>
-                <li>Agent Teams nativos são opcionais e respeitam as limitações do Claude.</li>
+                <li>One executor per card, with explicit collaborators and reviewers.</li>
+                <li>Overlapping write scopes wait until released.</li>
+                <li>Expired leases appear as “lost contact”; this does not complete the card.</li>
+                <li>Independent teams use separate sessions and worktrees.</li>
+                <li>Native Agent Teams are optional and subject to Claude limitations.</li>
               </ul>
               <p className="notice">
-                Peça ao Claude para adaptar etapas, gates e capacidade ao projeto. O board exibe o
-                estado persistido.
+                Ask Claude to adapt stages, gates and capacity to the project. The board displays
+                persisted state.
               </p>
             </>
           ) : detail?.type === 'flow' ? (
             <>
               <p>
-                Etapas e gates pertencem a esta entrega. O planner pode adaptar o fluxo enquanto ela
-                estiver aberta.
+                Stages and gates belong to this delivery. The planner can adapt the workflow while
+                it is open.
               </p>
               <div className="flow-list">
                 {get(detail.id)?.data.workflow.map((s: any, i: number) => (
@@ -974,8 +961,8 @@ function App() {
                       <p>
                         {s.gate ??
                           (s.phase === 'done'
-                            ? 'Resultado e evidências registrados.'
-                            : 'Etapa de ' + s.phase)}
+                            ? 'Result and evidence recorded.'
+                            : 'Stage: ' + s.phase)}
                       </p>
                     </div>
                     {s.gate ? <ShieldCheck /> : <ChevronRight />}
@@ -983,8 +970,8 @@ function App() {
                 ))}
               </div>
               <p className="notice">
-                Alterações de fluxo são feitas pelo Claude e ficam no histórico. Entregas aceitas
-                mantêm o fluxo original.
+                Claude makes workflow changes and records them in history. Accepted deliveries
+                retain their original workflow.
               </p>
             </>
           ) : (
@@ -1012,7 +999,7 @@ function App() {
                 {itemTasks.length > 0 && track(itemTasks)}
                 {entity.kind === 'task' && (
                   <>
-                    <h3>Critérios de aceitação</h3>
+                    <h3>Acceptance criteria</h3>
                     {entity.data.criteria.length ? (
                       <ul className="criteria">
                         {entity.data.criteria.map((c: string, i: number) => (
@@ -1023,11 +1010,11 @@ function App() {
                         ))}
                       </ul>
                     ) : (
-                      <p className="muted">O planner ainda não registrou critérios.</p>
+                      <p className="muted">The planner has not recorded criteria yet.</p>
                     )}
                     {children(entity.id).length > 0 && (
                       <>
-                        <h3>Etapas desta tarefa</h3>
+                        <h3>Subtasks</h3>
                         <div className="related-list">
                           {children(entity.id).map((t) => (
                             <button key={t.id} onClick={() => open({ type: 'entity', id: t.id })}>
@@ -1042,7 +1029,7 @@ function App() {
                     )}
                     {entity.data.dependencies.length > 0 && (
                       <>
-                        <h3>Depende de</h3>
+                        <h3>Depends on</h3>
                         <div className="related-list">
                           {entity.data.dependencies.map((id: string) => (
                             <button key={id} onClick={() => open({ type: 'entity', id })}>
@@ -1059,28 +1046,28 @@ function App() {
                 {entity.kind === 'team' && (
                   <div className="info-grid">
                     <div>
-                      <small>Motor de execução</small>
+                      <small>Execution engine</small>
                       <strong>{entity.data.engine}</strong>
                     </div>
                     <div>
-                      <small>Capacidade</small>
-                      <strong>{entity.data.maxAgents} agentes</strong>
+                      <small>Capacity</small>
+                      <strong>{entity.data.maxAgents} agents</strong>
                     </div>
                     <div>
                       <small>Workspace</small>
-                      <code>{entity.data.workspace || 'Não informado'}</code>
+                      <code>{entity.data.workspace || 'Not specified'}</code>
                     </div>
                   </div>
                 )}
                 {entity.data.result && (
                   <>
-                    <h3>Resultado registrado</h3>
+                    <h3>Recorded result</h3>
                     <p className="result">{entity.data.result}</p>
                   </>
                 )}
                 {entity.data.evidence?.length > 0 && (
                   <>
-                    <h3>Evidências</h3>
+                    <h3>Evidence</h3>
                     {entity.data.evidence.map((e: any, i: number) => (
                       <div className="evidence" key={i}>
                         <ShieldCheck />
@@ -1089,7 +1076,7 @@ function App() {
                           {e.commit && <code>{e.commit}</code>}
                           {e.url && /^https?:\/\//.test(e.url) && (
                             <a href={e.url} target="_blank" rel="noreferrer">
-                              Abrir evidência
+                              Open evidence
                               <ExternalLink />
                             </a>
                           )}
@@ -1100,7 +1087,7 @@ function App() {
                 )}
                 {entity.kind !== 'task' && itemTasks.length > 0 && (
                   <>
-                    <h3>Cards desta {entity.kind === 'delivery' ? 'entrega' : 'equipe'}</h3>
+                    <h3>Cards in this {entity.kind === 'delivery' ? 'delivery' : 'team'}</h3>
                     <div className="related-list">
                       {itemTasks.slice(0, 60).map((t) => (
                         <button key={t.id} onClick={() => open({ type: 'entity', id: t.id })}>
@@ -1115,7 +1102,7 @@ function App() {
                 )}
                 {agents.some((a) => itemTasks.some((t) => t.id === a.taskId)) && (
                   <>
-                    <h3>Agentes vinculados</h3>
+                    <h3>Assigned agents</h3>
                     {agents
                       .filter((a) => itemTasks.some((t) => t.id === a.taskId))
                       .map((a) => agentRow(a))}
@@ -1130,7 +1117,7 @@ function App() {
                         setHistory([]);
                       }}
                     >
-                      Abrir entrega
+                      Open delivery
                       <ArrowUpRight />
                     </button>
                     <button
@@ -1138,13 +1125,13 @@ function App() {
                       onClick={() => open({ type: 'flow', id: entity.id })}
                     >
                       <Workflow />
-                      Ver fluxo
+                      View workflow
                     </button>
                   </div>
                 )}
                 <div className="detail-bottom">
                   <Clock3 />
-                  Atualizado {new Date(entity.updatedAt).toLocaleString('pt-BR')}
+                  Updated {new Date(entity.updatedAt).toLocaleString('en-US')}
                 </div>
               </>
             )

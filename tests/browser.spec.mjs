@@ -29,7 +29,7 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
       await fetch(s.origin + '/api/ticket', { method: 'POST', headers, body: '{}' })
     ).json();
     await page.goto(ticket.url);
-    await page.getByText('O próximo passo começa aqui.').waitFor();
+    await page.getByText('Your next step starts here.').waitFor();
     seed(s.store);
     s.store.claim(claim());
     s.store.claim(
@@ -40,24 +40,26 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
         scopes: ['src/ui'],
       }),
     );
-    await page.getByRole('button', { name: /Abrir entrega/ }).click();
-    await page.getByRole('heading', { name: 'Recuperação de senha', exact: true }).waitFor();
+    await page.getByRole('button', { name: /Open delivery/ }).click();
+    await page.getByRole('heading', { name: 'Password recovery', exact: true }).waitFor();
     await page
-      .getByRole('button', { name: /Tokens de uso único/ })
+      .getByRole('button', { name: /Single-use tokens/ })
       .first()
       .click();
     await page.locator('dialog[open]').waitFor();
-    assert.ok(await page.getByText('Token expira e não pode ser reutilizado').isVisible());
+    assert.ok(await page.getByText('Token expires and cannot be reused').isVisible());
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Ver fluxo', exact: true }).click();
-    await page.getByText('Um fluxo que acompanha o projeto').waitFor();
-    await page.getByText('Critérios de aceitação e testes aprovados na versão integrada').waitFor();
+    await page.getByRole('button', { name: 'View workflow', exact: true }).click();
+    await page.getByText('A workflow that fits the project').waitFor();
+    await page
+      .getByText('Acceptance criteria and tests passed on the integrated version')
+      .waitFor();
     await page.keyboard.press('Escape');
-    await page.getByRole('tab', { name: 'Times', exact: true }).click();
+    await page.getByRole('tab', { name: 'Teams', exact: true }).click();
     await page.getByText('Backend agent', { exact: true }).waitFor();
     assert.equal(await page.locator('.team-card .orbit').count(), 2);
     await page.screenshot({ path: 'test-results/board-dark.png', fullPage: true });
-    await page.getByRole('button', { name: 'Ativar tema claro' }).click();
+    await page.getByRole('button', { name: 'Switch to light theme' }).click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
     await page.screenshot({ path: 'test-results/board-light.png', fullPage: true });
     await page.getByRole('tab', { name: 'Board', exact: true }).click();
@@ -84,11 +86,11 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
       s.store,
       'task',
       'form',
-      { description: 'Atualização real recebida pelo board' },
+      { description: 'Live update received by the board' },
       'update',
       { leaseToken: s.store.agents().find((a) => a.taskId === 'form').token },
     );
-    await page.getByText('Atualização real recebida pelo board', { exact: true }).waitFor();
+    await page.getByText('Live update received by the board', { exact: true }).waitFor();
     await s.store.snapshot();
     const rename = fs.promises.rename;
     try {
@@ -99,11 +101,11 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
         s.store,
         'delivery',
         'delivery',
-        { description: 'Snapshot recovery fixture' },
+        { description: 'Recover account access securely.' },
         'update',
       );
       await assert.rejects(s.store.snapshot(), (e) => e.code === 'SNAPSHOT_PENDING');
-      await page.getByText('Snapshot aguardando publicação', { exact: true }).waitFor();
+      await page.getByText('Snapshot awaiting publication', { exact: true }).waitFor();
       assert.equal(await page.locator('.error').count(), 0);
       assert.equal(await page.locator('.snapshot-warning').count(), 1);
       await page.screenshot({ path: 'test-results/snapshot-warning.png', fullPage: true });
@@ -133,7 +135,7 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
         ),
       );
       await page
-        .getByRole('button', { name: /Tokens de uso único/ })
+        .getByRole('button', { name: /Single-use tokens/ })
         .first()
         .click();
       assert.ok(

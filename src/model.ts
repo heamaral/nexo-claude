@@ -23,15 +23,15 @@ export const workflowSchema = z
   );
 export type Stage = z.infer<typeof stageSchema>;
 export const defaultWorkflow: Stage[] = [
-  { id: 'backlog', name: 'Planejado', phase: 'queued' },
-  { id: 'doing', name: 'Em progresso', phase: 'active' },
+  { id: 'backlog', name: 'Planned', phase: 'queued' },
+  { id: 'doing', name: 'In progress', phase: 'active' },
   {
     id: 'review',
-    name: 'Validação',
+    name: 'Validation',
     phase: 'review',
-    gate: 'Critérios de aceitação e testes aprovados na versão integrada',
+    gate: 'Acceptance criteria and tests passed on the integrated version',
   },
-  { id: 'done', name: 'Concluído', phase: 'done' },
+  { id: 'done', name: 'Completed', phase: 'done' },
 ];
 export const deliverySchema = z
   .object({
@@ -108,7 +108,7 @@ export const claimSchema = z
     teamId: id.optional(),
     parentAgentId: id.optional(),
     sessionId: z.string().max(200).optional(),
-    activity: z.string().max(500).default('Trabalhando'),
+    activity: z.string().max(500).default('Working'),
     scopes: z.array(z.string().min(1).max(500)).min(1).max(50),
     ttlSeconds: z.number().int().min(30).max(600).default(120),
   })

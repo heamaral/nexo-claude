@@ -21,7 +21,7 @@ async function main() {
     process.cwd();
   if (Number(process.versions.node.split('.')[0]) !== 24)
     throw new Error(
-      'Nexo requer Node.js 24.22.x (LTS). Instale esse runtime e confirme o PATH do Claude.',
+      'Nexo requires Node.js 24.22.x (LTS). Install this runtime and check the Claude PATH.',
     );
   if (action === 'serve') {
     const running = await startServer(findProject(cwd));
@@ -56,15 +56,15 @@ async function main() {
       promptFile = flag('--prompt-file');
     if (!taskId || !promptFile)
       throw new Error(
-        'run exige --task <id> --prompt-file <arquivo> --scope <caminho relativo> [--workspace <worktree>]',
+        'run requires --task <id> --prompt-file <file> --scope <relative-path> [--workspace <worktree>]',
       );
     const prompt = fs.readFileSync(promptFile, 'utf8');
-    if (prompt.length > 100000) throw new Error('Prompt excede 100 KiB');
+    if (prompt.length > 100000) throw new Error('Prompt exceeds 100 KiB');
     const scopes = (flag('--scope') ?? '').split(',').filter(Boolean);
-    if (!scopes.length) throw new Error('Informe escopos de escrita explícitos com --scope');
+    if (!scopes.length) throw new Error('Provide explicit write scopes with --scope');
     const budget = Number(flag('--max-budget-usd') ?? 10);
     if (!Number.isFinite(budget) || budget <= 0 || budget > 1000)
-      throw new Error('Budget deve estar entre 0 e 1000 USD');
+      throw new Error('Budget must be greater than 0 and at most 1000 USD');
     const sessionId = crypto.randomUUID();
     const actor = await request(
       'claim',
@@ -72,7 +72,7 @@ async function main() {
         taskId,
         agentId: sessionId,
         sessionId,
-        name: flag('--name') ?? 'Sessão independente',
+        name: flag('--name') ?? 'Independent session',
         teamId: flag('--team'),
         scopes,
         ttlSeconds: 600,
@@ -107,7 +107,7 @@ async function main() {
       },
     );
     child.stdin?.end(
-      `Nexo: taskId=${taskId}; teamId=${flag('--team') ?? ''}; agentId=${sessionId}; sessionId=${sessionId}. Uma lease já foi adquirida para você: leaseToken=${actor.token}. Não faça outra claim; use heartbeat e command com esta lease. Workspace=${workspace}.\n\n${prompt}`,
+      `Nexo: taskId=${taskId}; teamId=${flag('--team') ?? ''}; agentId=${sessionId}; sessionId=${sessionId}. A lease has already been acquired for you: leaseToken=${actor.token}. Do not claim again; use heartbeat and command with this lease. Workspace=${workspace}.\n\n${prompt}`,
     );
     const cleanup = () => request('release', { token: actor.token }, root).catch(() => {});
     for (const signal of ['SIGINT', 'SIGTERM'] as const)
@@ -162,7 +162,7 @@ async function main() {
     let size = 0;
     for await (const c of process.stdin) {
       size += c.length;
-      if (size > 262144) throw new Error('Entrada do hook excedeu o limite');
+      if (size > 262144) throw new Error('Hook input exceeded the size limit');
       chunks.push(c);
     }
     const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
@@ -201,7 +201,7 @@ async function main() {
     return;
   }
   console.log(
-    'Nexo · init | board [--no-open] | doctor | snapshot | resolve <event-id>\nUse --project <diretório> para escolher o projeto.',
+    'Nexo · init | board [--no-open] | doctor | snapshot | resolve <event-id>\nUse --project <directory> to select the project.',
   );
 }
 main().catch((e) => {

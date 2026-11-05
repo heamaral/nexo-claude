@@ -38,38 +38,38 @@ export function command(store, kind, id, data = {}, op = 'create', extra = {}) {
 }
 export function seed(store) {
   command(store, 'delivery', 'delivery', {
-    title: 'Recuperação de senha',
-    description: 'Tokens seguros, e-mail e experiência de recuperação.',
+    title: 'Password recovery',
+    description: 'Secure tokens, email and a recovery experience.',
   });
   command(store, 'team', 'backend', {
     deliveryId: 'delivery',
     title: 'Backend',
-    description: 'API e tokens de uso único',
+    description: 'API and single-use tokens',
     maxAgents: 3,
   });
   command(store, 'team', 'frontend', {
     deliveryId: 'delivery',
     title: 'Frontend',
-    description: 'Interface acessível de nova senha',
+    description: 'Accessible password reset interface',
     maxAgents: 3,
   });
   command(store, 'task', 'tokens', {
     deliveryId: 'delivery',
     teamId: 'backend',
-    title: 'Tokens de uso único',
-    criteria: ['Token expira e não pode ser reutilizado'],
+    title: 'Single-use tokens',
+    criteria: ['Token expires and cannot be reused'],
   });
   command(store, 'task', 'form', {
     deliveryId: 'delivery',
     teamId: 'frontend',
-    title: 'Formulário de nova senha',
+    title: 'Password reset form',
     criteria: ['Teclado e leitores de tela atendidos'],
   });
   command(store, 'task', 'integrate', {
     deliveryId: 'delivery',
-    title: 'Integrar e validar',
+    title: 'Integrate and validate',
     dependencies: ['tokens', 'form'],
-    criteria: ['Validar o mesmo commit integrado'],
+    criteria: ['Validate the same integrated commit'],
   });
 }
 export const claim = (taskId = 'tokens', extra = {}) => ({

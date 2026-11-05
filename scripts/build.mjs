@@ -41,7 +41,7 @@ const frontend = await build({
 });
 fs.writeFileSync(
   path.join(out, 'web/index.html'),
-  '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="Nexo — entregas, cards e agentes do seu projeto, em tempo real."><title>Nexo · Board do projeto</title><link rel="stylesheet" href="/app.css"><script type="module" src="/app.js"></script></head><body><div id="root"></div></body></html>\n',
+  '<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="Nexo — your project deliveries, cards and agents, live."><title>Nexo · Project board</title><link rel="stylesheet" href="/app.css"><script type="module" src="/app.js"></script></head><body><div id="root"></div></body></html>\n',
 );
 const packages = new Map();
 for (const input of [

@@ -36674,15 +36674,15 @@ var workflowSchema = external_exports.array(stageSchema).min(2).max(30).refine(
   "Unique stages with queued and done phases required"
 );
 var defaultWorkflow = [
-  { id: "backlog", name: "Planejado", phase: "queued" },
-  { id: "doing", name: "Em progresso", phase: "active" },
+  { id: "backlog", name: "Planned", phase: "queued" },
+  { id: "doing", name: "In progress", phase: "active" },
   {
     id: "review",
-    name: "Valida\xE7\xE3o",
+    name: "Validation",
     phase: "review",
-    gate: "Crit\xE9rios de aceita\xE7\xE3o e testes aprovados na vers\xE3o integrada"
+    gate: "Acceptance criteria and tests passed on the integrated version"
   },
-  { id: "done", name: "Conclu\xEDdo", phase: "done" }
+  { id: "done", name: "Completed", phase: "done" }
 ];
 var deliverySchema = external_exports.object({
   id,
@@ -36741,7 +36741,7 @@ var claimSchema = external_exports.object({
   teamId: id.optional(),
   parentAgentId: id.optional(),
   sessionId: external_exports.string().max(200).optional(),
-  activity: external_exports.string().max(500).default("Trabalhando"),
+  activity: external_exports.string().max(500).default("Working"),
   scopes: external_exports.array(external_exports.string().min(1).max(500)).min(1).max(50),
   ttlSeconds: external_exports.number().int().min(30).max(600).default(120)
 }).strict();
@@ -36807,14 +36807,14 @@ function findProject(cwd = process.cwd()) {
     if (up === current) break;
     current = up;
   }
-  throw new Error("Projeto n\xE3o inicializado. Execute /nexo:init neste diret\xF3rio.");
+  throw new Error("Project is not initialized. Run /nexo:init in this directory.");
 }
 function loadConfig(root2) {
   const dir = path.join(root2, ".nexo");
   assert2(
     !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
-    ".nexo n\xE3o pode ser um link simb\xF3lico",
+    ".nexo must not be a symbolic link",
     400
   );
   return configSchema.parse(JSON.parse(fs2.readFileSync(path.join(dir, "project.json"), "utf8")));
@@ -36838,7 +36838,7 @@ function initialize(cwd = process.cwd(), name, options = {}) {
   assert2(
     !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
-    ".nexo n\xE3o pode ser um link simb\xF3lico",
+    ".nexo must not be a symbolic link",
     400
   );
   const config2 = {
@@ -36882,7 +36882,7 @@ function localDir(root2) {
   assert2(
     !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
-    "local n\xE3o pode ser link simb\xF3lico",
+    "local must not be a symbolic link",
     400
   );
   return dir;
@@ -36895,7 +36895,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // src/version.ts
-var VERSION = "1.0.0-rc.4";
+var VERSION = "1.0.0-rc.5";
 function compareVersions(a, b) {
   const parse3 = (s) => {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
@@ -37129,7 +37129,7 @@ async function ensureServer(root2 = findProject()) {
       release();
     } else if (previous && processAlive(previous.pid))
       throw new Error(
-        "O processo do board ainda existe, mas n\xE3o responde. Consulte .nexo/local/server.log; Nexo n\xE3o inicia um segundo escritor."
+        "The board process is still running but is not responding. Check .nexo/local/server.log; Nexo will not start a second writer."
       );
     const log = fs5.openSync(path4.join(dir, "server.log"), "a");
     const child = spawn(
@@ -37155,7 +37155,7 @@ async function ensureServer(root2 = findProject()) {
       if (reusable(value)) return value;
       await wait(100);
     }
-    throw new Error("O board n\xE3o iniciou. Consulte .nexo/local/server.log e /nexo:doctor.");
+    throw new Error("The board did not start. Check .nexo/local/server.log and /nexo:doctor.");
   } finally {
     releaseStartup();
   }

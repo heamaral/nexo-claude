@@ -13,11 +13,11 @@ test('graph renders branches, hierarchy, external dependencies and live activity
   let browser;
   try {
     command(s.store, 'delivery', 'recovery', {
-      title: 'Recuperação de senha',
-      description: 'Uma entrega, vários caminhos em paralelo.',
+      title: 'Password recovery',
+      description: 'One delivery, multiple parallel paths.',
     });
-    command(s.store, 'team', 'implementation', { deliveryId: 'recovery', title: 'Implementação' });
-    command(s.store, 'team', 'security', { deliveryId: 'recovery', title: 'Revisão de segurança' });
+    command(s.store, 'team', 'implementation', { deliveryId: 'recovery', title: 'Implementation' });
+    command(s.store, 'team', 'security', { deliveryId: 'recovery', title: 'Security review' });
     const task = (id, title, deps = [], extra = {}) =>
       command(s.store, 'task', id, { deliveryId: 'recovery', title, dependencies: deps, ...extra });
     const complete = {
@@ -25,15 +25,15 @@ test('graph renders branches, hierarchy, external dependencies and live activity
       result: 'Fixture validated',
       evidence: [{ label: 'Fixture tests', commit: 'abc1234' }],
     };
-    task('contract', 'Contrato de recuperação', [], complete);
-    task('tokens', 'Tokens de uso único', ['contract'], complete);
-    task('email', 'Envio do e-mail', ['contract'], {
-      blocker: 'Credencial de e-mail pendente',
+    task('contract', 'Recovery contract', [], complete);
+    task('tokens', 'Single-use tokens', ['contract'], complete);
+    task('email', 'Send recovery email', ['contract'], {
+      blocker: 'Email credentials pending',
       teamId: 'implementation',
     });
-    task('reset', 'Redefinição de senha', ['tokens'], { teamId: 'implementation' });
-    task('audit', 'Revisar segurança dos tokens', ['tokens'], { teamId: 'security' });
-    task('integrate', 'Integrar e validar recuperação', ['reset', 'email', 'audit']);
+    task('reset', 'Password reset', ['tokens'], { teamId: 'implementation' });
+    task('audit', 'Review token security', ['tokens'], { teamId: 'security' });
+    task('integrate', 'Integrate and validate recovery', ['reset', 'email', 'audit']);
     s.store.claim({
       taskId: 'reset',
       agentId: 'backend-agent',
@@ -69,8 +69,8 @@ test('graph renders branches, hierarchy, external dependencies and live activity
       })
     ).json();
     await page.goto(ticket.url);
-    await page.getByRole('button', { name: 'Abrir entrega' }).click();
-    await page.getByRole('tab', { name: 'Caminho', exact: true }).click();
+    await page.getByRole('button', { name: 'Open delivery' }).click();
+    await page.getByRole('tab', { name: 'Graph', exact: true }).click();
     await page.locator('.graph-node').first().waitFor();
     assert.equal(await page.locator('.graph-node').count(), 6);
     assert.equal(await page.locator('.graph-edge.dependency').count(), 7);
@@ -88,22 +88,22 @@ test('graph renders branches, hierarchy, external dependencies and live activity
     await page.locator('dialog[open]').waitFor();
     await page
       .locator('dialog')
-      .getByRole('heading', { name: 'Redefinição de senha', exact: true })
+      .getByRole('heading', { name: 'Password reset', exact: true })
       .waitFor();
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Alternar tela cheia do mapa' }).click();
+    await page.getByRole('button', { name: 'Toggle map fullscreen' }).click();
     await page.waitForFunction(() => !!document.fullscreenElement);
-    await page.getByRole('button', { name: 'Ajustar mapa à tela' }).click();
+    await page.getByRole('button', { name: 'Fit map to view' }).click();
     await page.locator('[data-node-id="contract"]').click();
     await page.locator('dialog[open]').waitFor();
-    await page.getByRole('button', { name: 'Fechar detalhe' }).click();
-    await page.getByRole('button', { name: 'Alternar tela cheia do mapa' }).click();
+    await page.getByRole('button', { name: 'Close details' }).click();
+    await page.getByRole('button', { name: 'Toggle map fullscreen' }).click();
     await page.waitForFunction(() => !document.fullscreenElement);
-    await page.getByRole('button', { name: 'Ajustar mapa à tela' }).click();
+    await page.getByRole('button', { name: 'Fit map to view' }).click();
     const zoom = await page.locator('.graph-zoom').textContent();
-    await page.getByRole('button', { name: 'Aumentar zoom' }).click();
+    await page.getByRole('button', { name: 'Zoom in' }).click();
     assert.notEqual(await page.locator('.graph-zoom').textContent(), zoom);
-    await page.getByRole('button', { name: 'Ajustar mapa à tela' }).click();
+    await page.getByRole('button', { name: 'Fit map to view' }).click();
     const world = page.locator('.graph-world'),
       before = await world.getAttribute('style'),
       box = await viewport.boundingBox();
@@ -116,33 +116,33 @@ test('graph renders branches, hierarchy, external dependencies and live activity
     s.store.heartbeat(reviewer.token, 'Checking live graph updates');
     await page.waitForTimeout(300);
     assert.equal(await world.getAttribute('style'), camera);
-    await page.getByRole('button', { name: 'Ajustar mapa à tela' }).click();
-    await page.getByRole('textbox', { name: 'Buscar cards' }).fill('Tokens de uso único');
-    await page.getByRole('button', { name: '1 encontrados' }).waitFor();
+    await page.getByRole('button', { name: 'Fit map to view' }).click();
+    await page.getByRole('textbox', { name: 'Search cards' }).fill('Single-use tokens');
+    await page.getByRole('button', { name: '1 match', exact: true }).waitFor();
     assert.equal(await page.locator('.graph-node').count(), 6);
     assert.equal(await page.locator('.graph-node.search-match').count(), 1);
-    await page.getByRole('button', { name: 'Limpar busca' }).click();
-    await page.getByRole('button', { name: 'Ativar tema claro' }).click();
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await page.getByRole('button', { name: 'Switch to light theme' }).click();
     await viewport.screenshot({ path: 'test-results/graph-light.png' });
     // A topology update adds children to a parent: the graph derives composition without making up dependencies.
-    task('parent', 'Sistema de vento');
-    task('child-a', 'Contrato do vento', [], { parentId: 'parent' });
-    task('child-b', 'Runtime do vento', ['child-a'], { parentId: 'parent' });
+    task('parent', 'Wind system');
+    task('child-a', 'Wind contract', [], { parentId: 'parent' });
+    task('child-b', 'Wind runtime', ['child-a'], { parentId: 'parent' });
     await page.locator('[data-node-id="child-b"]').waitFor();
-    await page.getByRole('button', { name: 'Hierarquia', exact: true }).click();
+    await page.getByRole('button', { name: 'Hierarchy', exact: true }).click();
     await page
       .locator('.graph-edge[data-from="parent"][data-to="child-a"]')
       .waitFor({ state: 'attached' });
     assert.ok((await position('parent')).x < (await position('child-a')).x);
     assert.equal(await page.locator('.graph-edge.dependency').count(), 0);
-    await page.getByRole('button', { name: 'Dependências', exact: true }).click();
+    await page.getByRole('button', { name: 'Dependencies', exact: true }).click();
     await page
       .locator('.graph-edge[data-from="child-b"][data-to="parent"]')
       .waitFor({ state: 'attached' });
-    command(s.store, 'delivery', 'external', { title: 'Entrega anterior' });
+    command(s.store, 'delivery', 'external', { title: 'Previous delivery' });
     command(s.store, 'task', 'external-task', {
       deliveryId: 'external',
-      title: 'Contrato externo',
+      title: 'External contract',
       ...complete,
     });
     const latest = s.store.get('child-a');
@@ -163,7 +163,7 @@ test('graph renders branches, hierarchy, external dependencies and live activity
     );
     for (const width of [768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.getByRole('button', { name: 'Ajustar mapa à tela' }).click();
+      await page.getByRole('button', { name: 'Fit map to view' }).click();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       const rect = await viewport.boundingBox();
       assert.ok(rect.width <= width);
