@@ -131,9 +131,11 @@ try {
   // The pinned package uses this filename on Unix too; its postinstall places
   // the platform-native executable over the same cross-platform placeholder.
   const claude = path.resolve('node_modules/@anthropic-ai/claude-code/bin/claude.exe');
+  const claudeEnv = { ...env };
+  delete claudeEnv.CLAUDE_PLUGIN_DATA;
   const health = spawnSync(claude, ['--plugin-dir', plugin, 'mcp', 'list'], {
     env: {
-      ...env,
+      ...claudeEnv,
       CLAUDE_CONFIG_DIR: profile,
       HTTPS_PROXY: 'http://127.0.0.1:1',
       HTTP_PROXY: 'http://127.0.0.1:1',
@@ -145,6 +147,10 @@ try {
   });
   assert.equal(health.status, 0, String(health.error ?? health.stderr));
   assert.match(health.stdout, /plugin:nexo:nexo:[\s\S]*Connected/, health.stdout);
+  assert.ok(
+    fs.existsSync(path.join(inlineData, 'launchers')),
+    'Claude did not export its plugin data directory',
+  );
   console.log(
     JSON.stringify({
       globalNodeOnPath: false,

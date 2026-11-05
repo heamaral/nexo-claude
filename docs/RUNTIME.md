@@ -25,7 +25,7 @@ The host must meet the pinned official Node release's OS/libc requirements and p
 
 ## Cache, concurrency and updates
 
-The Node cache is `${CLAUDE_PLUGIN_DATA}/runtimes`; expanded native helpers live in `${CLAUDE_PLUGIN_DATA}/launchers`. Both are separate from the versioned plugin root and each project's `.nexo/`. Outside Claude without an explicit data path, the launcher falls back to `${CLAUDE_CONFIG_DIR}/plugins/data/nexo-nexo-marketplace`, or the corresponding `~/.claude` path. Inline plugins can have a different Claude-assigned data directory; pass the installed MCP configuration's `--data` path for terminal diagnostics.
+The Node cache is `${CLAUDE_PLUGIN_DATA}/runtimes`; expanded native helpers live in `${CLAUDE_PLUGIN_DATA}/launchers`. Both are separate from the versioned plugin root and each project's `.nexo/`. Hooks and MCP read this path from the environment Claude exports to them, keeping their configured command paths literal. Outside Claude without an explicit data path, the launcher falls back to `${CLAUDE_CONFIG_DIR}/plugins/data/nexo-nexo-marketplace`, or the corresponding `~/.claude` path. Inline plugins can have a different Claude-assigned data directory; pass that directory with `--data` for terminal diagnostics.
 
 Each version/platform/executable digest has a persistent OS lock file. A crash releases ownership; timestamps never justify stealing a live lock. Downloads stage under the cache. Only abandoned staging directories for the locked key are cleaned automatically. Installed generations and lock files are never replaced or removed. Short Windows sharing/access errors during activation receive bounded retries.
 

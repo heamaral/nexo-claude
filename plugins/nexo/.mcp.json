@@ -2,7 +2,7 @@
   "mcpServers": {
     "nexo": {
       "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-      "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "mcp"]
+      "args": ["mcp"]
     }
   }
 }
