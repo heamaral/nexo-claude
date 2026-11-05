@@ -6,7 +6,7 @@ Nexo is a local Claude Code plugin with a live browser board for deliveries, hie
 
 [Install](#get-started) · [How it works](#from-a-delivery-to-the-agents-working-on-it) · [Concurrency and recovery](docs/CONCURRENCY.md) · [Validation](docs/VALIDATION.md) · [MIT license](LICENSE)
 
-![Example delivery dependency graph in dark mode](docs/graph-dark.png)
+![Example delivery dependency graph in dark mode](docs/screenshots/en/graph-dark.png)
 
 _Screenshots use example project data. The interface, instructions and project scaffolding use English. Agents respond in your language._
 
@@ -46,7 +46,18 @@ Each delivery has its own board, teams and graph. Completing one delivery preser
 
 The intended benefit is less manual reconstruction of status from separate conversations. **There is no measured claim of token savings, faster delivery or improved model accuracy.** The validation report separates local measurements from untested scale assumptions.
 
-![Example delivery teams in dark mode](docs/board-dark.png)
+![Example delivery teams in dark mode](docs/screenshots/en/board-dark.png)
+
+<details>
+<summary>More English screenshots: light theme and mobile</summary>
+
+![Example delivery teams in light mode](docs/screenshots/en/board-light.png)
+
+![Example dependency graph in light mode](docs/screenshots/en/graph-light.png)
+
+![Example mobile board](docs/screenshots/en/board-mobile.png)
+
+</details>
 
 ## Get started
 
