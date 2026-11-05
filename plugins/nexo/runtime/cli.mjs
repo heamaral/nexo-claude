@@ -20003,7 +20003,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // src/version.ts
-var VERSION = "1.0.0-rc.5";
+var VERSION = "1.0.0-rc.6";
 function compareVersions(a, b) {
   const parse4 = (s) => {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
@@ -21739,7 +21739,7 @@ async function main() {
   const cwd = flag("--project") ?? process.env.NEXO_PROJECT_ROOT ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   if (Number(process.versions.node.split(".")[0]) !== 24)
     throw new Error(
-      "Nexo requires Node.js 24.22.x (LTS). Install this runtime and check the Claude PATH."
+      "Start Nexo through the bundled bootstrap/nexo launcher (nexo.exe on Windows); it automatically manages the required private Node runtime."
     );
   if (action === "serve") {
     const running = await startServer(findProject(cwd));

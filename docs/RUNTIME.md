@@ -1,33 +1,60 @@
-# Managed runtime proposal
+# Managed runtime
 
-Status: proposed, not implemented in rc.5. The current plugin still requires Node.js 24.22.x and a configured `node_path` where Node 24 is not on PATH.
+Starting in rc.6, Nexo manages its own Node runtime. Install the Claude Code plugin and open your project; no Node installation, node_path configuration, PATH change or project package installation is required. This release pins **Node 24.22.2**. A native launcher prepares that exact version independently of the AI.
 
-## Recommendation for Nexo
+## Startup
 
-Make the runtime a Nexo-managed dependency. A deterministic, platform-specific launcher should work before Node is available, obtain an exact tested runtime pack when necessary, and launch the bundled MCP/CLI with that private executable. The AI may explain diagnostics, but should not install or change global Node versions during ordinary sessions.
+1. Claude starts the bundled native launcher. Windows uses a small dispatcher; macOS/Linux use a POSIX shell selector and a native executable.
+2. The launcher checks its private cache against the bundled executable digest. On a cache miss, it takes an OS-managed installation lock and checks again.
+3. It downloads the official Node archive over HTTPS, verifies its pinned SHA-256, safely extracts only the executable and license, verifies the executable digest and size, and runs a Node/SQLite capability probe.
+4. A fresh immutable directory is activated. MCP, hooks, CLI and the project daemon use the selected executable. Concurrent clients share the installed generation.
 
-For the current implementation, a private Node runtime plus the existing bundled JavaScript is a lower-risk first step than changing SQLite libraries or migrating to another JavaScript engine. Node single-executable applications are another packaging option, but need a separate compatibility prototype for ESM entry points, embedded web assets and daemon spawning; the existing code cannot simply be renamed to an executable.
+MCP initialization responds while preparation continues. The read-only `runtime_status` tool reports progress or an actionable error. When the application is ready, a tools-list notification makes the regular tools discoverable. Application requests during preparation are queued with bounded memory; validation remains in the existing MCP server. Logs use stderr, keeping MCP stdout clean.
 
-## Desired user experience
+An uninitialized project's hooks exit without starting Node or creating a cache. Initialized-project hooks allow up to 120 seconds; setup itself has a 90-second deadline. Setup failure does not disable ownership checks.
 
-1. Install the Nexo plugin.
-2. The launcher selects the OS and architecture and checks a versioned cache.
-3. On first use, install a verified runtime pack if it is absent. Subsequent starts work offline.
-4. Launch MCP, hooks and the daemon using the same pinned runtime.
-5. `/nexo:init` and `/board` work without a Node-path prompt or PATH changes.
+## Platforms and prerequisites
 
-Use Claude's persistent `${CLAUDE_PLUGIN_DATA}` for managed dependencies. Keep per-project records in `.nexo/`; do not commit executable runtimes with each project or write caches into `${CLAUDE_PLUGIN_ROOT}`, which changes between plugin versions. Keep `node_path` as an optional expert override rather than required onboarding.
+| System           | Architectures          | Runtime archive      |
+| ---------------- | ---------------------- | -------------------- |
+| Windows          | x64, ARM64             | Official Node ZIP    |
+| macOS            | Intel x64, Apple ARM64 | Official Node tar.gz |
+| Linux with glibc | x64, ARM64             | Official Node tar.gz |
 
-## Distribution and recovery
+The host must meet the pinned official Node release's OS/libc requirements and permit executable files in the cache. Alpine/musl, 32-bit hosts and other architectures are outside the supported set. Ordinary macOS/Linux `/bin/sh`, `uname` and `dirname` select the native launcher. Docker, Go, npm and pnpm are not user dependencies. CI executes all six OS/architecture pairs, including native ARM64 runners; see the validation report for evidence and limits.
 
-- Publish tested runtime packs per supported OS/architecture, with embedded license notices. Version and digest information must come from a trusted, authenticated release manifest, not an unverified checksum beside an arbitrary download.
-- Use a process-safe installation lock so simultaneous MCP/hook starts share one download and installation.
-- Download to staging, validate the archive, prevent path traversal, verify the digest, run a capability probe including SQLite, then activate atomically.
-- Pin a runtime pack per Nexo release. Updates select a new version rather than overwriting an executable used by a running daemon. Retain a known-good version until handoff is complete.
-- Keep bootstrap logs off MCP stdout. Provide actionable offline/proxy/download errors and an offline preseed option.
-- Do not silently alter global Node, PATH or project package dependencies. Do not require Docker to open a local board.
-- Define supported Windows/macOS/Linux targets explicitly; test permissions, antivirus/file-sharing behavior, executable permissions and platform signing requirements.
+## Cache, concurrency and updates
 
-Before shipping, prototype launcher routing with Claude's actual MCP and hook schemas on each platform. A single cross-platform manifest must not assume the same shell or executable suffix everywhere. Test on clean machines with no Node installed, offline cache reuse, simultaneous starts, interrupted downloads, tampered artifacts, paths containing spaces and runtime upgrade with active leases. First-run setup must also fit the hook timeout behavior or happen through a dedicated setup entry point before normal hooks are enabled.
+The cache is `${CLAUDE_PLUGIN_DATA}/runtimes`, separate from the versioned plugin root and each project's `.nexo/`. Outside Claude without an explicit data path, the launcher falls back to `${CLAUDE_CONFIG_DIR}/plugins/data/nexo-nexo-marketplace`, or the corresponding `~/.claude` path. Inline plugins can have a different Claude-assigned data directory; pass the installed MCP configuration's `--data` path for terminal diagnostics.
 
-References: [Claude plugin data and environment variables](https://code.claude.com/docs/en/plugins-reference#environment-variables), [Node 24 single-executable applications](https://nodejs.org/download/release/v24.22.1/docs/api/single-executable-applications.html).
+Each version/platform/executable digest has a persistent OS lock file. A crash releases ownership; timestamps never justify stealing a live lock. Downloads stage under the cache. Only abandoned staging directories for the locked key are cleaned automatically. Installed generations and lock files are never replaced or removed. Short Windows sharing/access errors during activation receive bounded retries.
+
+Plugin releases select a pinned runtime. A changed pin installs a new generation while old daemons keep their executable. Existing graceful daemon handoff preserves project data and live leases. There is no independent automatic Node upgrade. Old generations remain available; reclaim them manually only after every process using them has stopped.
+
+Transient download errors receive at most three attempts with backoff and jitter inside the deadline. Corrupt digests and HTTP 429 do not trigger immediate retries. Failed attempts create a shared 30-second cooldown so concurrent clients do not hammer the server. Explicit `setup` bypasses the cooldown. Requests use OS certificate trust and HTTP_PROXY/HTTPS_PROXY settings; HTTPS cannot redirect to plaintext. Archive and extraction sizes are bounded.
+
+## Diagnostics and offline use
+
+Use `/nexo:doctor` and the read-only `runtime_status` MCP tool. After fixing a network, certificate, disk or execution-policy problem, reconnect MCP. For explicit terminal recovery:
+
+```sh
+<plugin>/bootstrap/nexo --data <persistent-plugin-data> runtime-status
+<plugin>/bootstrap/nexo --data <persistent-plugin-data> setup
+<plugin>/bootstrap/nexo --data <persistent-plugin-data> doctor --project <project-root>
+```
+
+On Windows use `nexo.exe`. `runtime-status` checks the cache without downloading; `setup` prepares it and reports JSON. Cache-miss setup needs internet access. Cached startup requires no network access.
+
+For offline deployment, run `setup` on a connected machine of the **same OS and architecture** using the same Nexo release. Copy the completed `runtimes/node-<version>-<platform>-<digest>-<generation>/` directory, including the executable and LICENSE, into the destination plugin-data `runtimes/` directory. Preserve executable permissions on Unix. The launcher validates the executable digest on reuse. Do not copy project tokens, runtime lock files or incomplete `.stage-*` directories. An unverified archive placed in the cache is not an offline installation.
+
+The optional environment variable `NEXO_NODE_PATH` selects a trusted compatible Node executable (major 24, at least 24.22.0), checked with the SQLite probe. This expert override skips managed download. It is not an installation prompt; old saved `node_path` plugin settings are ignored. Private subprocesses strip NODE_OPTIONS and NODE_PATH to avoid accidental global injection.
+
+## Build and trust
+
+Launcher source lives in `bootstrap/`. `pnpm build:bootstrap` requires Go **1.27.3** and cross-compiles the executables using fixed settings. CI rebuilds and compares committed artifacts, runs native tests and real runtime acceptance, and tests a non-root Linux container with no Node installed plus offline cache reuse. The container is a validation fixture only.
+
+The bundled manifest supplies trusted archive/executable digests and supported MCP protocols, checked against the bundled SDK during builds. Updating the pin requires authenticating official vendor checksums, verifying all archives, deriving executable digests and running release checks. Runtime licenses accompany the cache; Go and JavaScript notices accompany the plugin.
+
+The plugin source, distribution and manifest must be trusted. Checksums do not protect a replaced plugin distribution. Native artifacts are not separately OS-signed/notarized; enterprise deployment must follow its execution policy. See [security boundaries](../SECURITY.md), [validation evidence](VALIDATION.md) and the remaining [stable-release criteria](RELEASE.md).
+
+References: [Claude plugin data and environment variables](https://code.claude.com/docs/en/plugins-reference#environment-variables), [official pinned Node checksums](https://nodejs.org/dist/v24.22.2/SHASUMS256.txt).

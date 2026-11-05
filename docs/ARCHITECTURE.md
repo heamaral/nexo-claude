@@ -26,7 +26,7 @@ After a merge, retain the union of events from both branches. Missing parents bl
 Recovery procedure:
 
 1. Preserve a copy of `.nexo/`; resolve conflicting or missing JSON files in Git.
-2. Run `/nexo:doctor` or `node <plugin>/runtime/cli.mjs doctor --project <root>`.
+2. Run `/nexo:doctor` or `<plugin>/bootstrap/nexo doctor --project <root>` (`nexo.exe` on Windows). The launcher manages Node; see [runtime setup](RUNTIME.md) for cache selection outside Claude.
 3. Review version conflicts and resulting state. `resolve <event-id>` explicitly acknowledges a losing event in `resolutions.json`.
 4. Reapply the desired intent as a new command using the current version. Acknowledging a loser does not apply its content.
 5. Run `snapshot`; commit the events, resolutions and reconstructed SQLite together.

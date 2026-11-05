@@ -61,7 +61,7 @@ The intended benefit is less manual reconstruction of status from separate conve
 
 ## Get started
 
-Requirements: **Node.js 24.22.x**, **Claude Code 2.1.316 or later**, and Git. The runtime and browser assets are bundled; using the plugin does not require pnpm or a separate web deployment.
+Requirements: **Claude Code 2.1.316 or later**, Git, and Windows, macOS or glibc Linux (x64 or ARM64). **No Node installation or configuration is required.** Nexo automatically prepares its private, verified Node runtime on first use. Internet access is needed for that first download; subsequent starts reuse the verified cache offline. The browser assets are bundled.
 
 In Claude Code:
 
@@ -70,7 +70,7 @@ In Claude Code:
 /plugin install nexo@nexo-marketplace
 ```
 
-Configure the plugin's `node_path` with your Node 24 executable if it is not the default on Claude's PATH. Then, from a project directory:
+Then, from a project directory:
 
 ```text
 /nexo:init
@@ -94,6 +94,8 @@ claude plugin update nexo@nexo-marketplace --scope user
 ```
 
 Use the installation's actual scope if it is `project` or `local`. Run `/reload-plugins` in the relevant Claude sessions and reopen `/board`.
+
+Nexo manages its own runtime without changing global Node, PATH or project dependencies. Earlier `node_path` settings are no longer required. See [managed runtime and offline setup](docs/RUNTIME.md) for platforms, proxies, diagnostics and the optional expert override.
 
 ## Coordination backed by state
 
@@ -139,10 +141,14 @@ See [validation evidence](docs/VALIDATION.md) and [remaining stable-release crit
 
 ## Development
 
+Contributors need Node 24.22.x, pnpm 11.25.0 and Go 1.27.3 to rebuild the native launchers. Plugin users need none of these development tools.
+
 ```sh
 corepack pnpm install --frozen-lockfile
+pnpm build:bootstrap
 pnpm check
 pnpm test:browser
+pnpm test:runtime
 pnpm validate:plugin
 ```
 
@@ -150,4 +156,4 @@ Source lives in `src/`; the bundled marketplace runtime lives in `plugins/nexo/r
 
 ## License
 
-Nexo is licensed under [MIT](LICENSE). Bundled dependencies retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+Nexo is licensed under [MIT](LICENSE). Bundled dependencies retain their original licenses; see [JavaScript notices](THIRD_PARTY_NOTICES.md) and [native launcher notices](plugins/nexo/bootstrap/THIRD_PARTY_NOTICES.md). The private Node runtime includes its own license.

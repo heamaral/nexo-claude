@@ -1,0 +1,6 @@
+**
+!plugins
+!plugins/nexo
+!plugins/nexo/**
+!bootstrap
+!bootstrap/clean-linux.Dockerfile

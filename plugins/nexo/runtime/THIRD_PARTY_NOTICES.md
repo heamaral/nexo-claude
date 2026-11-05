@@ -1,6 +1,6 @@
 # Third-party notices
 
-This file is generated from the packages included in the bundled runtime. Their original licenses apply independently of the MIT-licensed Nexo source.
+This file is generated from the packages included in the bundled JavaScript runtime. Their original licenses apply independently of the MIT-licensed Nexo source. Native launcher notices are in plugins/nexo/bootstrap/THIRD_PARTY_NOTICES.md (bootstrap/THIRD_PARTY_NOTICES.md inside the plugin). The privately downloaded Node runtime includes its own LICENSE.
 
 ## @modelcontextprotocol/sdk@1.32.2
 

@@ -1,6 +1,6 @@
 {
   "name": "nexo-claude",
-  "version": "1.0.0-rc.5",
+  "version": "1.0.0-rc.6",
   "private": true,
   "type": "module",
   "description": "Project-local delivery planning, agent coordination and live kanban for Claude Code",
@@ -18,7 +18,9 @@
     "start": "node plugins/nexo/runtime/cli.mjs board",
     "doctor": "node plugins/nexo/runtime/cli.mjs doctor",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build:bootstrap": "node scripts/build-bootstrap.mjs",
+    "test:runtime": "node scripts/runtime-acceptance.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

@@ -63,7 +63,7 @@ for (const input of [
   }
 }
 let notices =
-  '# Third-party notices\n\nThis file is generated from the packages included in the bundled runtime. Their original licenses apply independently of the MIT-licensed Nexo source.\n';
+  '# Third-party notices\n\nThis file is generated from the packages included in the bundled JavaScript runtime. Their original licenses apply independently of the MIT-licensed Nexo source. Native launcher notices are in plugins/nexo/bootstrap/THIRD_PARTY_NOTICES.md (bootstrap/THIRD_PARTY_NOTICES.md inside the plugin). The privately downloaded Node runtime includes its own LICENSE.\n';
 for (const [name, { dir, pkg }] of [...packages].sort(([a], [b]) => a.localeCompare(b))) {
   notices += '\n## ' + name + '\n\nLicense: ' + String(pkg.license ?? 'See package notices') + '\n';
   for (const file of fs

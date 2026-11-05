@@ -1,5 +1,9 @@
 # Release criteria
 
+## 1.0.0-rc.6 — managed private runtime
+
+Native launchers remove the Node installation and node_path onboarding requirement. First use downloads the release-pinned Node 24.22.2 for the native platform, verifies archive and executable digests, probes SQLite and activates an immutable cache generation. Process-safe installation locks, bounded retries, shared failure cooldown and retained versions support simultaneous clients and recovery. MCP initializes while setup runs and exposes runtime_status; no global Node, PATH or project dependency changes are made. Cached starts work offline. Windows/macOS/glibc Linux x64 and ARM64 artifacts are included; CI exercises the available host architectures. See [operation and trust boundaries](RUNTIME.md). This remains a release candidate.
+
 ## 1.0.0-rc.5 — English interface and documentation
 
 The browser interface, default labels, accessibility text, runtime messages, plugin metadata and examples use English. Documentation is translated and screenshots are regenerated from the English UI with English fixture data. Existing project content retains its original language. No schema keys, IDs or workflow phase values are renamed. This release does not introduce a managed Node runtime or promote the project to stable.
