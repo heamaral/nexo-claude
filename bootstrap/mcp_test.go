@@ -103,7 +103,6 @@ func TestMCPRespondsDuringSetupAndDiscoversApplicationTools(t *testing.T) {
 	if string(init.ID) != "1" || len(init.Error) != 0 || time.Since(before) > 2*time.Second {
 		t.Fatal("runtime download blocked MCP initialization", init)
 	}
-	_ = input.Encode(map[string]any{"jsonrpc": "2.0", "method": "notifications/initialized"})
 	_ = input.Encode(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
 	list := read()
 	var initial struct {
@@ -123,6 +122,17 @@ func TestMCPRespondsDuringSetupAndDiscoversApplicationTools(t *testing.T) {
 	// exactly once to the SDK server after the native handshake finishes.
 	_ = input.Encode(map[string]any{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": map[string]any{"name": "command", "arguments": map[string]any{"op": "remove-everything"}}})
 	close(gate)
+	// Even if the runtime finishes first, application discovery must wait for
+	// the client's initialization notification, as required by MCP lifecycle.
+	deadline := time.Now().Add(10 * time.Second)
+	for m.State().Status != "ready" && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	_ = input.Encode(map[string]any{"jsonrpc": "2.0", "id": 6, "method": "ping"})
+	if q := read(); string(q.ID) != "6" {
+		t.Fatal("application notification preceded client initialization", q)
+	}
+	_ = input.Encode(map[string]any{"jsonrpc": "2.0", "method": "notifications/initialized"})
 	changed := false
 	answered := false
 	for !changed || !answered {

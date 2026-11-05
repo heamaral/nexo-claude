@@ -106,7 +106,7 @@ func bridge(ctx context.Context, m *Manager, root string, in io.Reader, out, log
 	_, _ = rand.Read(nonce[:])
 	privateID := "nexo-bootstrap-" + hex.EncodeToString(nonce[:])
 	privateJSON, _ := json.Marshal(privateID)
-	var initialized, ready bool
+	var initialized, clientReady, ready bool
 	var node string
 	var initParams map[string]any
 	var setupErr error
@@ -120,7 +120,7 @@ func bridge(ctx context.Context, m *Manager, root string, in io.Reader, out, log
 		return json.NewEncoder(childInput).Encode(message)
 	}
 	start := func() error {
-		if node == "" || !initialized || child != nil {
+		if node == "" || !initialized || !clientReady || child != nil {
 			return nil
 		}
 		child = exec.CommandContext(ctx, node, "--disable-warning=ExperimentalWarning", filepath.Join(root, "runtime", "mcp.mjs"))
@@ -222,6 +222,10 @@ func bridge(ctx context.Context, m *Manager, root string, in io.Reader, out, log
 				continue
 			}
 			if q.Method == "notifications/initialized" {
+				clientReady = true
+				if err := start(); err != nil {
+					return err
+				}
 				continue
 			}
 			if q.Method == "ping" {
