@@ -59,7 +59,7 @@ for (const [os, arch, name, source] of [
     ],
     { GOOS: os, GOARCH: arch },
   );
-  if (os !== 'windows') fs.chmodSync(path.join(out, name), 0o755);
+  fs.chmodSync(path.join(out, name), 0o755);
   console.log(`Built ${name}`);
 }
 fs.chmodSync(path.join(out, 'nexo'), 0o755);
