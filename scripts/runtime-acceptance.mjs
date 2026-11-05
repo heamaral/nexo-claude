@@ -122,6 +122,30 @@ try {
   const state = await call('state');
   assert.ok(state.entities.some((e) => e.id === 'task'));
   await call('snapshot');
+  // Exercise the actual native Claude launcher with the same restricted PATH.
+  // Preseed its isolated inline-plugin cache with the verified production runtime.
+  const profile = path.join(temp, 'isolated Claude profile');
+  const inlineData = path.join(profile, 'plugins/data/nexo-inline');
+  fs.mkdirSync(inlineData, { recursive: true });
+  fs.cpSync(path.join(data, 'runtimes'), path.join(inlineData, 'runtimes'), { recursive: true });
+  const claude = path.resolve(
+    'node_modules/@anthropic-ai/claude-code/bin',
+    process.platform === 'win32' ? 'claude.exe' : 'claude',
+  );
+  const health = spawnSync(claude, ['--plugin-dir', plugin, 'mcp', 'list'], {
+    env: {
+      ...env,
+      CLAUDE_CONFIG_DIR: profile,
+      HTTPS_PROXY: 'http://127.0.0.1:1',
+      HTTP_PROXY: 'http://127.0.0.1:1',
+    },
+    cwd: project,
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 30000,
+  });
+  assert.equal(health.status, 0, String(health.error ?? health.stderr));
+  assert.match(health.stdout, /plugin:nexo:nexo:[\s\S]*Connected/, health.stdout);
   console.log(
     JSON.stringify({
       globalNodeOnPath: false,
@@ -131,6 +155,7 @@ try {
       platform: runtime.platform,
       offlineReuse: true,
       originalLeaseAcceptedAfterRestart: true,
+      nativeClaudeConnectedWithoutNode: true,
     }),
   );
 } finally {
