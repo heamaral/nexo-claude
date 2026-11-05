@@ -1,7 +1,7 @@
 {
   "name": "nexo",
   "displayName": "Nexo",
-  "version": "1.0.0-rc.6",
+  "version": "1.0.0-rc.7",
   "description": "Local delivery planning, hierarchical tasks, agents and a live board for every Claude Code project.",
   "author": {
     "name": "Henrique Barcellos"

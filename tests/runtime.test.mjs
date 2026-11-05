@@ -8,6 +8,18 @@ import { spawnSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
+test('every distributed plugin file fits the directory hard size limit', () => {
+  const root = path.resolve('plugins/nexo');
+  for (const file of fs.readdirSync(root, { recursive: true, withFileTypes: true })) {
+    if (!file.isFile()) continue;
+    const fullPath = path.join(file.parentPath, file.name);
+    assert.ok(
+      fs.statSync(fullPath).size <= 5 * 1024 * 1024,
+      'Directory file exceeds 5 MiB: ' + path.relative(root, fullPath),
+    );
+  }
+});
+
 export function isolatedRuntimeFixture() {
   const temp = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'nexo-runtime-test-')));
   const plugin = path.resolve('plugins/nexo');

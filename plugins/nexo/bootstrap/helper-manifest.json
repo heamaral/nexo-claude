@@ -1,0 +1,47 @@
+{
+  "applicationVersion": "1.0.0-rc.7",
+  "artifacts": {
+    "windows-amd64": {
+      "payloadName": "nexo-windows-amd64.exe.gz",
+      "payloadDigest": "94e337c90b361d22014fdf1d80e333bc22e728986a7a7b34717d5bb1de7107bc",
+      "helperDigest": "86b7477ecffcefa455ab57d7fd82c479c02f42cc4fbde61319e9c3708dcaf693",
+      "helperSize": "7683584",
+      "applicationVersion": "1.0.0-rc.7"
+    },
+    "windows-arm64": {
+      "payloadName": "nexo-windows-arm64.exe.gz",
+      "payloadDigest": "5034b8fa0d40756098954001ea1b55deecbe069aeee3d7b6bbc8b37187d0443c",
+      "helperDigest": "b34739c452dec18e8d234042e3baf0fc89ebdcc416d1f47882be4340554f10da",
+      "helperSize": "6972416",
+      "applicationVersion": "1.0.0-rc.7"
+    },
+    "linux-amd64": {
+      "payloadName": "nexo-linux-amd64.gz",
+      "payloadDigest": "93cdef6d16cb0454eb1d086e82470be07b00b50c61d30ac3a6d7ef53971bea39",
+      "helperDigest": "9db9e8fe87363634eed75961312d0077f58d5467c627c60058da4e8125612a26",
+      "helperSize": "7467132",
+      "applicationVersion": "1.0.0-rc.7"
+    },
+    "linux-arm64": {
+      "payloadName": "nexo-linux-arm64.gz",
+      "payloadDigest": "0ea9003251c67aaae0f8179e9038cbfb9f521890b296fe2e8461dc1f0772cd2b",
+      "helperDigest": "960725f62d496efda4846b9f71264abb40f3684cf7952dc4bdc1bd8ad7320bed",
+      "helperSize": "6946940",
+      "applicationVersion": "1.0.0-rc.7"
+    },
+    "darwin-amd64": {
+      "payloadName": "nexo-darwin-amd64.gz",
+      "payloadDigest": "f52c462768038ca550fc546f711295d7e92b68012e82440899d27daa020b6877",
+      "helperDigest": "bce271769042ef9beae1b249199003d4791ce986d86a56c1530bba4fbe9a32dd",
+      "helperSize": "7619872",
+      "applicationVersion": "1.0.0-rc.7"
+    },
+    "darwin-arm64": {
+      "payloadName": "nexo-darwin-arm64.gz",
+      "payloadDigest": "b0aef19bcec1a9d97f261e06780f8e7967d714c85663cf16f23c3476d3946c96",
+      "helperDigest": "a8f43f53c99dbdf604a7257642bfc7064bf9ebedb148ec961ca3076649ecf8cb",
+      "helperSize": "7047458",
+      "applicationVersion": "1.0.0-rc.7"
+    }
+  }
+}

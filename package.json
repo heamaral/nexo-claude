@@ -1,6 +1,6 @@
 {
   "name": "nexo-claude",
-  "version": "1.0.0-rc.6",
+  "version": "1.0.0-rc.7",
   "private": true,
   "type": "module",
   "description": "Project-local delivery planning, agent coordination and live kanban for Claude Code",
