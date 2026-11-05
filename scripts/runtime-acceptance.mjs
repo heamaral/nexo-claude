@@ -128,10 +128,9 @@ try {
   const inlineData = path.join(profile, 'plugins/data/nexo-inline');
   fs.mkdirSync(inlineData, { recursive: true });
   fs.cpSync(path.join(data, 'runtimes'), path.join(inlineData, 'runtimes'), { recursive: true });
-  const claude = path.resolve(
-    'node_modules/@anthropic-ai/claude-code/bin',
-    process.platform === 'win32' ? 'claude.exe' : 'claude',
-  );
+  // The pinned package uses this filename on Unix too; its postinstall places
+  // the platform-native executable over the same cross-platform placeholder.
+  const claude = path.resolve('node_modules/@anthropic-ai/claude-code/bin/claude.exe');
   const health = spawnSync(claude, ['--plugin-dir', plugin, 'mcp', 'list'], {
     env: {
       ...env,
