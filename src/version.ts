@@ -1,4 +1,4 @@
-export const VERSION = '1.0.0-rc.6';
+export const VERSION = '1.0.0-rc.7';
 
 /** Semver precedence prevents old and new MCP clients from downgrading each other's daemon. */
 export function compareVersions(a: string, b: string): number {

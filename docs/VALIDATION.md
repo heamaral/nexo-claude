@@ -2,6 +2,10 @@
 
 These results describe specific tested environments. They are not performance guarantees for every machine or project size.
 
+## rc.7 - compact native packaging (2026-11-05)
+
+The directory-size prototype produced native entry points below 2.5 MB and compressed helpers below 3.4 MB. The native tests cover cache reuse, compressed and expanded digest failures, immutable recovery after cache corruption, four simultaneous extraction processes, preservation of a live lock, and cleanup after a real process crash. A Windows production-manifest trial completed native Claude startup without Node on PATH, offline reuse and renewal of the original lease. Cold MCP connection took 833 ms in that local trial, including helper preparation; this is a fixture observation rather than a startup guarantee. CI repeats the checks on all six supported OS/architecture pairs and compares all generated artifacts.
+
 ## rc.6 — managed runtime (2026-11-05)
 
 A real Windows Claude Code 2.1.316 launch used an isolated profile and project with Node removed from PATH. Claude discovered and connected to the plugin's native MCP entry point, expanded the persistent plugin-data path and did not request node_path configuration.

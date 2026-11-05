@@ -6,3 +6,4 @@ THIRD_PARTY_NOTICES.md
 test-results/
 playwright-report/
 .nexo/
+.bootstrap-build/

@@ -3,3 +3,4 @@
 plugins/nexo/runtime/** -diff
 plugins/nexo/bootstrap/*.exe binary
 plugins/nexo/bootstrap/nexo-* -text -diff
+plugins/nexo/bootstrap/*.gz binary

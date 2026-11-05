@@ -1,12 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, 'plugins/nexo/bootstrap');
 const manifest = JSON.parse(fs.readFileSync(path.join(out, 'runtime-manifest.json'), 'utf8'));
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const buildDir = path.join(root, '.bootstrap-build');
+fs.mkdirSync(buildDir, { recursive: true });
+const helpers = { applicationVersion: pkg.version, artifacts: {} };
 if (manifest.applicationVersion !== pkg.version)
   throw new Error('Native runtime manifest version differs from package.json');
 if (JSON.stringify(manifest.protocols) !== JSON.stringify(SUPPORTED_PROTOCOL_VERSIONS))
@@ -47,21 +51,52 @@ for (const [os, arch, name, source] of [
   ['darwin', 'amd64', 'nexo-darwin-amd64', '.'],
   ['darwin', 'arm64', 'nexo-darwin-arm64', '.'],
 ]) {
+  const helper = name !== 'nexo.exe';
+  const target = path.join(helper ? buildDir : out, name);
   execute(
-    [
-      'build',
-      '-trimpath',
-      '-buildvcs=false',
-      '-ldflags=-s -w -buildid=',
-      '-o',
-      path.join(out, name),
-      source,
-    ],
+    ['build', '-trimpath', '-buildvcs=false', '-ldflags=-s -w -buildid=', '-o', target, source],
     { GOOS: os, GOARCH: arch },
   );
+  if (helper) {
+    const payload = name + '.gz';
+    execute(['run', './pack', target, path.join(out, payload)]);
+    const raw = fs.readFileSync(target);
+    const packed = fs.readFileSync(path.join(out, payload));
+    if (packed.length > 5 * 1024 * 1024)
+      throw new Error('Helper payload exceeds directory file limit');
+    const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
+    const fields = {
+      payloadName: payload,
+      payloadDigest: digest(packed),
+      helperDigest: digest(raw),
+      helperSize: String(raw.length),
+      applicationVersion: pkg.version,
+    };
+    helpers.artifacts[os + '-' + arch] = fields;
+    const flags =
+      '-s -w -buildid= ' +
+      Object.entries(fields)
+        .map(([key, value]) => '-X main.' + key + '=' + value)
+        .join(' ');
+    execute(
+      [
+        'build',
+        '-trimpath',
+        '-buildvcs=false',
+        '-ldflags=' + flags,
+        '-o',
+        path.join(out, name),
+        './loader',
+      ],
+      { GOOS: os, GOARCH: arch },
+    );
+  }
+  if (fs.statSync(path.join(out, name)).size > 5 * 1024 * 1024)
+    throw new Error('Native entry point exceeds directory file limit');
   fs.chmodSync(path.join(out, name), 0o755);
   console.log(`Built ${name}`);
 }
+fs.writeFileSync(path.join(out, 'helper-manifest.json'), JSON.stringify(helpers, null, 2) + '\n');
 fs.chmodSync(path.join(out, 'nexo'), 0o755);
 const goroot = execute(['env', 'GOROOT']);
 let licenses =

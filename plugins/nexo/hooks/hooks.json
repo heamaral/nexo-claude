@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]
@@ -18,7 +18,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]
@@ -31,7 +31,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120,
             "onFailure": "block"
           }
@@ -44,7 +44,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]
@@ -56,7 +56,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]
@@ -68,7 +68,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]
@@ -80,7 +80,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]
@@ -92,7 +92,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
-            "args": ["--data", "${CLAUDE_PLUGIN_DATA}", "hook"],
+            "args": ["hook"],
             "timeout": 120
           }
         ]

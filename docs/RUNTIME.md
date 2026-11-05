@@ -4,14 +4,14 @@ Starting in rc.6, Nexo manages its own Node runtime. Install the Claude Code plu
 
 ## Startup
 
-1. Claude starts the bundled native launcher. Windows uses a small dispatcher; macOS/Linux use a POSIX shell selector and a native executable.
+1. Claude starts a compact native launcher. Windows uses a small dispatcher; macOS/Linux use a POSIX shell selector. Starting in rc.7, the entry point verifies and expands the bundled compressed helper into a private, immutable cache generation. This step is offline and uses digests embedded in the compiled entry point.
 2. The launcher checks its private cache against the bundled executable digest. On a cache miss, it takes an OS-managed installation lock and checks again.
 3. It downloads the official Node archive over HTTPS, verifies its pinned SHA-256, safely extracts only the executable and license, verifies the executable digest and size, and runs a Node/SQLite capability probe.
 4. A fresh immutable directory is activated. MCP, hooks, CLI and the project daemon use the selected executable. Concurrent clients share the installed generation.
 
 MCP initialization responds while preparation continues. The read-only `runtime_status` tool reports progress or an actionable error. When the application is ready, a tools-list notification makes the regular tools discoverable. Application requests during preparation are queued with bounded memory; validation remains in the existing MCP server. Logs use stderr, keeping MCP stdout clean.
 
-An uninitialized project's hooks exit without starting Node or creating a cache. Initialized-project hooks allow up to 120 seconds; setup itself has a 90-second deadline. Setup failure does not disable ownership checks.
+An uninitialized project's hooks exit without starting Node or creating a Node cache. The small native helper can be cached first. Helper preparation has a 10-second deadline; Node setup has a 90-second deadline. Initialized-project hooks allow up to 120 seconds. Setup failure does not disable ownership checks.
 
 ## Platforms and prerequisites
 
@@ -25,7 +25,7 @@ The host must meet the pinned official Node release's OS/libc requirements and p
 
 ## Cache, concurrency and updates
 
-The cache is `${CLAUDE_PLUGIN_DATA}/runtimes`, separate from the versioned plugin root and each project's `.nexo/`. Outside Claude without an explicit data path, the launcher falls back to `${CLAUDE_CONFIG_DIR}/plugins/data/nexo-nexo-marketplace`, or the corresponding `~/.claude` path. Inline plugins can have a different Claude-assigned data directory; pass the installed MCP configuration's `--data` path for terminal diagnostics.
+The Node cache is `${CLAUDE_PLUGIN_DATA}/runtimes`; expanded native helpers live in `${CLAUDE_PLUGIN_DATA}/launchers`. Both are separate from the versioned plugin root and each project's `.nexo/`. Hooks and MCP read this path from the environment Claude exports to them, keeping their configured command paths literal. Outside Claude without an explicit data path, the launcher falls back to `${CLAUDE_CONFIG_DIR}/plugins/data/nexo-nexo-marketplace`, or the corresponding `~/.claude` path. Inline plugins can have a different Claude-assigned data directory; pass that directory with `--data` for terminal diagnostics.
 
 Each version/platform/executable digest has a persistent OS lock file. A crash releases ownership; timestamps never justify stealing a live lock. Downloads stage under the cache. Only abandoned staging directories for the locked key are cleaned automatically. Installed generations and lock files are never replaced or removed. Short Windows sharing/access errors during activation receive bounded retries.
 
@@ -51,7 +51,7 @@ The optional environment variable `NEXO_NODE_PATH` selects a trusted compatible 
 
 ## Build and trust
 
-Launcher source lives in `bootstrap/`. `pnpm build:bootstrap` requires Go **1.27.3** and cross-compiles the executables using fixed settings. CI rebuilds and compares committed artifacts, runs native tests and real runtime acceptance, and tests a non-root Linux container with no Node installed plus offline cache reuse. The container is a validation fixture only.
+Launcher source lives in `bootstrap/`. `pnpm build:bootstrap` requires Go **1.27.3** and cross-compiles the executables using fixed settings. The pinned Go toolchain creates deterministic gzip payloads, and each small entry point embeds the expected compressed and expanded helper digests and size. Source, payload hashes and the helper manifest remain available for review. This packaging keeps each distributed file below the directory's 5 MiB hard limit; compiled files and large bundles still require Anthropic's human review. CI rebuilds and compares committed artifacts, runs native tests and real runtime acceptance, and tests a non-root Linux container with no Node installed plus offline cache reuse. The container is a validation fixture only.
 
 The bundled manifest supplies trusted archive/executable digests and supported MCP protocols, checked against the bundled SDK during builds. Updating the pin requires authenticating official vendor checksums, verifying all archives, deriving executable digests and running release checks. Runtime licenses accompany the cache; Go and JavaScript notices accompany the plugin.
 

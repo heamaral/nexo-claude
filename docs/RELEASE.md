@@ -1,5 +1,9 @@
 # Release criteria
 
+## 1.0.0-rc.7 - directory-sized native packaging
+
+Anthropic's directory rejects individual files above 5 MiB. Native entry points now expand a bundled, verified gzip helper into a private cache before starting the existing runtime manager. Each entry point and payload fits the limit. Extraction is offline, checks embedded compressed and expanded digests and size, uses an OS-managed lock, and activates immutable generations. A corrupt generation is retained while a new one is prepared; live locks are never stolen by age. No global Node setup is introduced. Directory security review and the broader stable-release gates remain separate requirements.
+
 ## 1.0.0-rc.6 — managed private runtime
 
 Native launchers remove the Node installation and node_path onboarding requirement. First use downloads the release-pinned Node 24.22.2 for the native platform, verifies archive and executable digests, probes SQLite and activates an immutable cache generation. Process-safe installation locks, bounded retries, shared failure cooldown and retained versions support simultaneous clients and recovery. MCP initializes while setup runs and exposes runtime_status; no global Node, PATH or project dependency changes are made. Cached starts work offline. Windows/macOS/glibc Linux x64 and ARM64 artifacts are included; CI exercises the available host architectures. See [operation and trust boundaries](RUNTIME.md). This remains a release candidate.

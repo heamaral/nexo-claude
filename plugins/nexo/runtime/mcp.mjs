@@ -36895,7 +36895,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // src/version.ts
-var VERSION = "1.0.0-rc.6";
+var VERSION = "1.0.0-rc.7";
 function compareVersions(a, b) {
   const parse3 = (s) => {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
