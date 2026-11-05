@@ -25,7 +25,7 @@ test('versioned commands, idempotency, hierarchy and combined dependency cycles'
     assert.throws(() => f.store.execute({ ...c, data: { description: 'Other' } }), /commandId/);
     assert.throws(
       () => command(f.store, 'task', 'tokens', { dependencies: ['integrate'] }, 'update'),
-      /Ciclo/,
+      /Cycle/,
     );
     command(f.store, 'task', 'child', {
       deliveryId: 'delivery',
@@ -34,7 +34,7 @@ test('versioned commands, idempotency, hierarchy and combined dependency cycles'
     });
     assert.throws(
       () => command(f.store, 'task', 'child', { dependencies: ['tokens'] }, 'update'),
-      /hierarquia/,
+      /hierarchy/,
     );
     assert.equal(f.store.get('tokens').version, 2);
   } finally {
@@ -54,18 +54,18 @@ test('claims serialize executors and overlapping scopes; fencing rejects stale c
     assert.throws(
       () =>
         f.store.claim(claim('form', { agentId: 'agent-b', teamId: 'frontend', scopes: ['src'] })),
-      /Escopo/,
+      /scope/i,
     );
     assert.throws(
       () =>
         f.store.claim(
           claim('integrate', { agentId: 'agent-c', teamId: undefined, scopes: ['integration'] }),
         ),
-      /Dependências/,
+      (error) => error.code === 'DEPENDENCIES_PENDING',
     );
     f.store.db.prepare('UPDATE agents SET expires_at=0').run();
     assert.equal(f.store.agents()[0].state, 'lost_contact');
-    assert.throws(() => f.store.heartbeat(a.token), /expirada/);
+    assert.throws(() => f.store.heartbeat(a.token), /expired/);
     const b = f.store.claim(claim('tokens', { agentId: 'agent-b' }));
     assert.ok(b.fence > a.fence);
     assert.throws(
@@ -109,21 +109,21 @@ test('evidence, parent progress and accepted delivery history are enforced', () 
       result: 'Implemented',
       evidence: [{ label: 'Tests', commit: 'abc1234' }],
     };
-    assert.throws(() => command(f.store, 'task', 'parent', finish, 'update'), /Subcards/);
+    assert.throws(() => command(f.store, 'task', 'parent', finish, 'update'), /Subtasks/);
     assert.throws(
       () => command(f.store, 'task', 'child', { stageId: 'done', result: 'Done' }, 'update'),
-      /evidência/,
+      /evidence/,
     );
     command(f.store, 'task', 'child', finish, 'update');
     command(f.store, 'task', 'parent', finish, 'update');
     command(f.store, 'delivery', 'd', { result: 'Delivered' }, 'accept');
     assert.throws(
       () => command(f.store, 'task', 'child', { title: 'Changed' }, 'update'),
-      /imutável/,
+      /immutable/,
     );
     assert.throws(
       () => command(f.store, 'delivery', 'd', { title: 'Other' }, 'update'),
-      /imutável/,
+      /immutable/,
     );
     command(f.store, 'delivery', 'next', { title: 'Next delivery', revisionOf: 'd' });
     assert.equal(f.store.get('d').data.title, 'Delivery');
@@ -199,7 +199,7 @@ test('parallel branch changes create a deterministic explicit merge conflict', (
     a.store.sync();
     assert.equal(a.store.conflicts().length, 1);
     const conflict = a.store.conflicts()[0].event_id;
-    assert.throws(() => command(a.store, 'delivery', 'new', { title: 'Blocked' }), /divergentes/);
+    assert.throws(() => command(a.store, 'delivery', 'new', { title: 'Blocked' }), /Divergent/);
     a.store.resolve([conflict]);
     command(a.store, 'delivery', 'd', { title: 'Reconciled' }, 'update');
     assert.equal(a.store.get('d').data.title, 'Reconciled');
@@ -217,7 +217,7 @@ test('projects remain isolated and runtime actors never leak into cloned history
     assert.equal(b.store.all().length, 0);
     const event = a.store.events()[0];
     fs.writeFileSync(path.join(b.root, '.nexo/events', event.id + '.json'), JSON.stringify(event));
-    assert.throws(() => b.store.sync(), /Integridade/);
+    assert.throws(() => b.store.sync(), /integrity/);
   } finally {
     a.close();
     b.close();

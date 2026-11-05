@@ -1,37 +1,41 @@
-# Gates de lançamento
+# Release criteria
+
+## 1.0.0-rc.5 — English interface and documentation
+
+The browser interface, default labels, accessibility text, runtime messages, plugin metadata and examples use English. Documentation is translated and screenshots are regenerated from the English UI with English fixture data. Existing project content retains its original language. No schema keys, IDs or workflow phase values are renamed. This release does not introduce a managed Node runtime or promote the project to stable.
 
 ## 1.0.0-rc.4 — public launch preparation
 
-Nexo is now licensed under MIT, including the bundled plugin license. The main README and plugin introduction explain installation, task hierarchy versus execution dependencies, agent ownership, local data, validation evidence and limitations in English. Third-party license notices remain preserved. The browser interface remains Portuguese. This release does not change the coordination protocol or promote the project to stable; no speedup or token-saving benchmark is claimed.
+Nexo adopted MIT, including the bundled plugin license. The main and plugin READMEs introduced installation, hierarchy versus dependencies, agent ownership, local data, evidence and limitations in English. Third-party notices were preserved. The browser interface was still Portuguese in this release. Coordination behavior was unchanged; no speedup or token-saving benchmark was claimed.
 
 ## 1.0.0-rc.3
 
-Correção da publicação de snapshots sob concorrência: escritor único com mutex do sistema operacional via SQLite; startup sem roubar locks vivos por idade; fila que reúne pedidos simultâneos e acompanha gerações duráveis; heartbeat/release não reconstroem o SQLite exportável; retry assíncrono e limitado para EPERM/EACCES/EBUSY, seguido de retomada automática com backoff. Falhas de exportação deixam o último snapshot íntegro e não bloqueiam agentes. Encerramento drena HTTP, preserva banco/outbox mesmo se a publicação falhar e libera o dono do diretório. Eventos pendentes são exportados antes da reconciliação Git. Consulte [concorrência e operação](CONCURRENCY.md).
+Snapshot publication was hardened for concurrency: one directory writer with an OS-managed SQLite mutex; startup without stealing live locks by age; a queue coalescing callers by durable generation; heartbeats/releases without snapshot reconstruction; bounded asynchronous EPERM/EACCES/EBUSY retries and automatic backoff recovery. Export failures preserve the last complete snapshot and do not block agents. Shutdown drains HTTP and preserves live SQLite/outbox even when publication fails. Pending events are exported before Git reconciliation. See [concurrency and operation](CONCURRENCY.md).
 
-Testes adicionais cobrem processos reais concorrentes, queda forçada, outbox não exportada, coalescência, geração mais recente, prazo de retry, recuperação automática, encerramento com falha e handle Windows sem compartilhamento de exclusão. A classificação continua RC: essas verificações não substituem os gates de piloto, recuperação e escala abaixo.
+Tests added real concurrent processes, forced crashes, unexported outbox recovery, coalescing, newer generations, retry deadlines, automatic recovery, failed shutdown publication and a Windows handle without delete sharing. These checks do not replace the pilot, recovery and scale criteria below.
 
 ## 1.0.0-rc.2
 
-Caminho agora usa um grafo interativo com ramificações, junções, modos de dependências e hierarquia, contexto externo, zoom/pan e tela cheia. O upgrade substitui um servidor antigo de forma graciosa, preservando cards e leases. Consulte [o guia do grafo](GRAPH.md). Nenhuma migração do banco é necessária.
+The delivery path became an interactive graph with branches, joins, dependency/hierarchy modes, external context, zoom/pan and fullscreen. Graceful upgrades preserve cards and leases when replacing an older service. See [the graph guide](GRAPH.md). No database migration was needed.
 
 ## 1.0.0-rc.1
 
-Implementado: plugin Claude Code com marketplace privado, MCP stdio empacotado, planner/worker/reviewer, skills, hooks, estado por diretório, SQLite/ledger, leases com fencing, workflow por entrega, evidências, prevenção de ciclos, histórico aceito imutável, FTS5, serviço loopback autenticado, SSE, board real claro/escuro e modais.
+Implemented the Claude Code plugin with a private marketplace, bundled MCP stdio, planner/worker/reviewer, skills, hooks, per-directory state, SQLite/event history, fenced leases, delivery workflows, evidence, cycle prevention, immutable accepted history, FTS5, authenticated loopback HTTP, SSE, themes and modals.
 
-Os testes exercitam oito solicitações de claim simultâneas, perda de lease, concorrência por escopo, versão/idempotência, ciclos combinados, evidência, histórico, replay após checkout, conflito entre branches, snapshot sem runtime, HTTP host/origin/auth/body, SSE, protocolo MCP oficial e o navegador real em vários tamanhos e movimento reduzido. Consulte a execução do CI para o resultado do commit exato.
+Tests cover eight simultaneous claims, lease loss, scope contention, versions/idempotency, combined cycles, evidence, history, replay after checkout, branch conflicts, runtime-free snapshots, HTTP host/origin/auth/body checks, SSE, official MCP protocol, browser sizes and reduced motion. Consult CI for the exact tested revision.
 
-Antes da promoção para 1.0.0 estável:
+## Before stable 1.0.0
 
-- [x] CI Windows/Linux/macOS e Chromium Linux no commit 0346bd4; correções de caminhos e layout confirmadas.
-- [x] Marketplace privado e instalação por projeto validados em perfil Claude isolado, incluindo node_path configurado.
-- [ ] Piloto interativo no menu `/board` na instalação principal do usuário.
-- [x] Planner/worker nativos criaram e concluíram uma entrega de teste, com entrada/saída observada.
-- [ ] Piloto de feature real com edição, integração e reviewer no mesmo commit.
-- [x] Duas sessões simultâneas em worktrees distintos, apontando ao mesmo coordenador.
-- [x] Helper `run` validado com autenticação existente, permissões normais e orçamento explícito.
-- [ ] Encerrar forçadamente uma sessão, retomar e testar recuperação sem duplicar conclusão.
-- [ ] Executar merge real com alteração concorrente e revisar resolução.
-- [ ] Definir e medir escala/SLO para os maiores projetos que serão usados.
-- [ ] Revisão de segurança e recuperação em máquina limpa.
+- [x] Windows/Linux/macOS and Chromium Linux CI at commit 0346bd4, with path/layout fixes confirmed.
+- [x] Private marketplace and per-project installation in an isolated Claude profile, including configured node_path.
+- [ ] Interactive `/board` pilot in the primary user installation.
+- [x] Native planner/worker created and completed a fixture delivery, with observed agent entry/exit.
+- [ ] Real feature pilot with edits, integration and review on the same commit.
+- [x] Two simultaneous sessions in separate worktrees using one coordinator.
+- [x] `run` helper validated with existing authentication, normal permissions and explicit budget.
+- [ ] Force-stop a Claude session, resume and verify recovery without duplicate completion.
+- [ ] Perform a real concurrent-change merge and review resolution.
+- [ ] Define and measure scale/SLO for the largest intended projects.
+- [ ] Security review and recovery on a clean machine.
 
-Esses gates são critérios de qualidade da entrega, não exigências de confirmação para tarefas reversíveis. Não anuncie a versão como produção validada enquanto eles estiverem pendentes.
+These are release quality criteria, not approval requirements for reversible work. Do not describe production readiness as validated while they remain open.

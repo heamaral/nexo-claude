@@ -19749,15 +19749,15 @@ var workflowSchema = external_exports.array(stageSchema).min(2).max(30).refine(
   "Unique stages with queued and done phases required"
 );
 var defaultWorkflow = [
-  { id: "backlog", name: "Planejado", phase: "queued" },
-  { id: "doing", name: "Em progresso", phase: "active" },
+  { id: "backlog", name: "Planned", phase: "queued" },
+  { id: "doing", name: "In progress", phase: "active" },
   {
     id: "review",
-    name: "Valida\xE7\xE3o",
+    name: "Validation",
     phase: "review",
-    gate: "Crit\xE9rios de aceita\xE7\xE3o e testes aprovados na vers\xE3o integrada"
+    gate: "Acceptance criteria and tests passed on the integrated version"
   },
-  { id: "done", name: "Conclu\xEDdo", phase: "done" }
+  { id: "done", name: "Completed", phase: "done" }
 ];
 var deliverySchema = external_exports.object({
   id,
@@ -19816,7 +19816,7 @@ var claimSchema = external_exports.object({
   teamId: id.optional(),
   parentAgentId: id.optional(),
   sessionId: external_exports.string().max(200).optional(),
-  activity: external_exports.string().max(500).default("Trabalhando"),
+  activity: external_exports.string().max(500).default("Working"),
   scopes: external_exports.array(external_exports.string().min(1).max(500)).min(1).max(50),
   ttlSeconds: external_exports.number().int().min(30).max(600).default(120)
 }).strict();
@@ -19905,7 +19905,7 @@ function loadConfig(root) {
   assert2(
     !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
-    ".nexo n\xE3o pode ser um link simb\xF3lico",
+    ".nexo must not be a symbolic link",
     400
   );
   return configSchema.parse(JSON.parse(fs2.readFileSync(path2.join(dir, "project.json"), "utf8")));
@@ -19916,7 +19916,7 @@ function localDir(root) {
   assert2(
     !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
-    "local n\xE3o pode ser link simb\xF3lico",
+    "local must not be a symbolic link",
     400
   );
   return dir;
@@ -19927,7 +19927,7 @@ function safeEventsDir(root) {
   assert2(
     !fs2.lstatSync(dir).isSymbolicLink(),
     "UNSAFE_PATH",
-    "events n\xE3o pode ser link simb\xF3lico",
+    "events must not be a symbolic link",
     400
   );
   return dir;
@@ -20169,7 +20169,7 @@ var Store = class {
       assert2(
         !version2 || version2.value === "1",
         "SCHEMA_VERSION",
-        "Vers\xE3o de banco n\xE3o suportada. Atualize o Nexo."
+        "Unsupported database version. Update Nexo."
       );
       this.db.prepare("INSERT OR IGNORE INTO meta VALUES(?,?)").run("schema", "1");
       this.snapshots = new Snapshots(
@@ -20247,17 +20247,17 @@ var Store = class {
     assert2(
       command.op === "create" ? !current : current,
       "NOT_FOUND",
-      command.op === "create" ? "ID j\xE1 existe" : "Entidade n\xE3o encontrada"
+      command.op === "create" ? "ID already exists" : "Entity not found"
     );
     assert2(
       (current?.version ?? 0) === command.expectedVersion,
       "VERSION_CONFLICT",
-      "Vers\xE3o mudou. Consulte o estado e replaneje."
+      "Version changed. Read state and replan."
     );
     assert2(
       !current || current.kind === command.kind,
       "KIND_MISMATCH",
-      "Tipo da entidade n\xE3o corresponde"
+      "Entity kind does not match"
     );
     const input2 = { ...current?.data ?? {}, ...command.data, id: command.id };
     const data = schemaFor(command.kind).parse(input2);
@@ -20265,30 +20265,34 @@ var Store = class {
       assert2(
         data.deliveryId === current.data.deliveryId,
         "IMMUTABLE_SCOPE",
-        "N\xE3o mova cards ou times entre entregas"
+        "Do not move cards or teams between deliveries"
       );
     }
     if (command.kind === "delivery") {
       assert2(
         current?.data.status !== "accepted",
         "ACCEPTED_DELIVERY",
-        "Entrega aceita \xE9 imut\xE1vel. Crie uma nova entrega."
+        "Accepted deliveries are immutable. Create a new delivery."
       );
       assert2(
         command.op === "accept" || data.status !== "accepted",
         "ACCEPT_REQUIRED",
-        "Use accept para aceitar a entrega"
+        "Use accept to accept the delivery"
       );
       if (data.revisionOf) {
         const previous = this.get(data.revisionOf);
-        assert2(previous?.kind === "delivery", "INVALID_REVISION", "Entrega anterior n\xE3o existe");
+        assert2(
+          previous?.kind === "delivery",
+          "INVALID_REVISION",
+          "Previous delivery does not exist"
+        );
       }
       const tasks = this.all("task").filter((t) => t.data.deliveryId === data.id);
       for (const t of tasks)
         assert2(
           data.workflow.some((s) => s.id === t.data.stageId),
           "STAGE_IN_USE",
-          "Uma etapa em uso n\xE3o pode ser removida"
+          "A stage in use cannot be removed"
         );
       if (current) {
         for (const t of tasks) {
@@ -20297,7 +20301,7 @@ var Store = class {
           assert2(
             old?.phase === next?.phase,
             "STAGE_IN_USE",
-            "N\xE3o altere a sem\xE2ntica de uma etapa em uso; crie outra etapa"
+            "Do not change the meaning of a stage in use; create another stage"
           );
         }
       }
@@ -20307,33 +20311,37 @@ var Store = class {
             (t) => data.workflow.find((s) => s.id === t.data.stageId)?.phase === "done"
           ),
           "INCOMPLETE_DELIVERY",
-          "Todos os cards precisam estar conclu\xEDdos"
+          "All cards must be completed"
         );
-        assert2(data.result?.trim(), "RESULT_REQUIRED", "Registre o resultado da entrega");
+        assert2(data.result?.trim(), "RESULT_REQUIRED", "Record the delivery result");
         assert2(
           !this.agents().some((a) => tasks.some((t) => t.id === a.taskId) && a.state === "working"),
           "ACTIVE_AGENTS",
-          "Encerre os agentes antes de aceitar"
+          "Release the agents before accepting"
         );
         data.status = "accepted";
       }
     } else {
       const delivery = this.get(data.deliveryId);
-      assert2(delivery?.kind === "delivery", "INVALID_DELIVERY", "Entrega n\xE3o encontrada");
-      assert2(delivery.data.status !== "accepted", "ACCEPTED_DELIVERY", "Entrega aceita \xE9 imut\xE1vel");
-      assert2(command.op !== "accept", "INVALID_OPERATION", "Use update para cards e times");
+      assert2(delivery?.kind === "delivery", "INVALID_DELIVERY", "Delivery not found");
+      assert2(
+        delivery.data.status !== "accepted",
+        "ACCEPTED_DELIVERY",
+        "Accepted deliveries are immutable"
+      );
+      assert2(command.op !== "accept", "INVALID_OPERATION", "Use update for cards and teams");
       if (command.kind === "task") {
         assert2(
           delivery.data.workflow.some((s) => s.id === data.stageId),
           "INVALID_STAGE",
-          "Etapa n\xE3o existe na entrega"
+          "Stage does not exist in the delivery"
         );
         if (data.teamId) {
           const team = this.get(data.teamId);
           assert2(
             team?.kind === "team" && team.data.deliveryId === data.deliveryId,
             "INVALID_TEAM",
-            "Time n\xE3o pertence \xE0 entrega"
+            "Team does not belong to the delivery"
           );
         }
         if (data.parentId) {
@@ -20341,23 +20349,23 @@ var Store = class {
           assert2(
             parent?.kind === "task" && parent.data.deliveryId === data.deliveryId,
             "INVALID_PARENT",
-            "Card pai n\xE3o pertence \xE0 entrega"
+            "Parent card does not belong to the delivery"
           );
           assert2(
             this.get(parent.data.deliveryId)?.data.workflow.find(
               (s) => s.id === parent.data.stageId
             )?.phase !== "done",
             "PARENT_DONE",
-            "Reabra o pai antes de alterar sua composi\xE7\xE3o"
+            "Reopen the parent before changing its composition"
           );
         }
         assert2(
           new Set(data.dependencies).size === data.dependencies.length,
           "DUPLICATE_DEPENDENCY",
-          "Depend\xEAncias duplicadas"
+          "Duplicate dependencies"
         );
         for (const dep of data.dependencies)
-          assert2(this.get(dep)?.kind === "task", "INVALID_DEPENDENCY", "Depend\xEAncia n\xE3o existe");
+          assert2(this.get(dep)?.kind === "task", "INVALID_DEPENDENCY", "Dependency does not exist");
         const tasks = /* @__PURE__ */ new Map([[data.id, data]]);
         const taskData = (id2) => {
           if (!tasks.has(id2)) tasks.set(id2, this.get(id2)?.data);
@@ -20375,12 +20383,12 @@ var Store = class {
           assertAcyclic(
             data.id,
             (node2) => taskData(node2)?.parentId ? [taskData(node2).parentId] : [],
-            "Ciclo na hierarquia ou nas depend\xEAncias"
+            "Cycle in hierarchy or dependencies"
           );
           assertAcyclic(
             data.id,
             (node2) => taskData(node2)?.dependencies ?? [],
-            "Ciclo na hierarquia ou nas depend\xEAncias"
+            "Cycle in hierarchy or dependencies"
           );
           assertAcyclic(
             data.id,
@@ -20388,7 +20396,7 @@ var Store = class {
               ...taskData(node2)?.dependencies ?? [],
               ...childData(node2).map((t) => t.id)
             ],
-            "Depend\xEAncia bloqueia a pr\xF3pria hierarquia"
+            "Dependency blocks its own hierarchy"
           );
         }
         const isDone = (t) => {
@@ -20397,30 +20405,34 @@ var Store = class {
         };
         const phase = delivery.data.workflow.find((s) => s.id === data.stageId).phase;
         if (phase === "done" || phase === "active") {
-          assert2(!data.blocker, "BLOCKED", "Resolva o impedimento antes de executar ou concluir");
+          assert2(
+            !data.blocker,
+            "BLOCKED",
+            "Resolve the blocker before starting or completing work"
+          );
           assert2(
             data.dependencies.every((dep) => isDone(taskData(dep))),
             "DEPENDENCIES_PENDING",
-            "Depend\xEAncias precisam ser conclu\xEDdas"
+            "Dependencies must be completed"
           );
         }
         if (phase === "done") {
           assert2(
             childData(data.id).every(isDone),
             "CHILDREN_PENDING",
-            "Subcards precisam ser conclu\xEDdos"
+            "Subtasks must be completed"
           );
           assert2(
             data.result.trim() && data.evidence.length,
             "EVIDENCE_REQUIRED",
-            "Conclus\xE3o exige resultado e evid\xEAncia"
+            "Completion requires a result and evidence"
           );
           const gates = delivery.data.workflow.filter((s) => s.gate);
           if (gates.length)
             assert2(
               data.evidence.some((e) => e.commit),
               "COMMIT_REQUIRED",
-              "A entrega com gate exige evid\xEAncia ligada ao commit validado"
+              "A gated delivery requires evidence linked to the validated commit"
             );
         }
         if (current && isDone(current.data) && phase !== "done") {
@@ -20429,7 +20441,7 @@ var Store = class {
               (t) => isDone(t) && (t.dependencies.includes(data.id) || t.id === data.parentId)
             ),
             "COMPLETED_DEPENDENT",
-            "Reabra os dependentes conclu\xEDdos antes deste card"
+            "Reopen completed dependents before this card"
           );
         }
       }
@@ -20459,7 +20471,7 @@ var Store = class {
     assert2(
       !this.conflicts().length,
       "MERGE_CONFLICT",
-      "Eventos divergentes aguardam resolu\xE7\xE3o. Execute doctor."
+      "Divergent events require resolution. Run doctor."
     );
     const duplicate = this.db.prepare("SELECT event FROM events WHERE command_id=?").get(command.commandId);
     if (duplicate) {
@@ -20468,7 +20480,7 @@ var Store = class {
       assert2(
         JSON.stringify(original.command) === JSON.stringify(clean),
         "IDEMPOTENCY_MISMATCH",
-        "commandId reutilizado com outro conte\xFAdo"
+        "commandId reused with different content"
       );
       this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
@@ -20481,7 +20493,7 @@ var Store = class {
         assert2(
           command.leaseToken === claims[0].token,
           "LEASE_REQUIRED",
-          "Card em execu\xE7\xE3o exige a lease atual"
+          "An active card requires its current lease"
         );
       if (command.leaseToken)
         assert2(
@@ -20489,7 +20501,7 @@ var Store = class {
             (a) => a.token === command.leaseToken && a.taskId === command.id && a.state === "working"
           ),
           "STALE_LEASE",
-          "Lease expirada ou substitu\xEDda"
+          "Lease expired or replaced"
         );
       if (command.kind === "task") {
         const current = this.get(command.id);
@@ -20500,7 +20512,7 @@ var Store = class {
               (a) => a.taskId === command.id && a.state === "working" && a.token !== command.leaseToken
             ),
             "ACTIVE_COLLABORATORS",
-            "Aguarde os colaboradores liberarem o card"
+            "Wait for collaborators to release the card"
           );
       }
       if (command.kind === "task" && this.db.prepare("SELECT value FROM fences WHERE task_id=?").get(command.id)) {
@@ -20510,7 +20522,7 @@ var Store = class {
           assert2(
             command.leaseToken,
             "LEASE_REQUIRED",
-            "Card executado exige uma lease v\xE1lida para concluir"
+            "A previously claimed card requires a valid lease for completion"
           );
       }
       const { leaseToken: _, ...clean } = command;
@@ -20573,7 +20585,7 @@ var Store = class {
       assert2(
         stat.isFile() && !stat.isSymbolicLink() && stat.size < 1024 * 1024,
         "INVALID_EVENT",
-        "Arquivo de evento inv\xE1lido"
+        "Invalid event file"
       );
       const stamp = stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size, cached2 = this.fileCache.get(name);
       const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs5.readFileSync(file2, "utf8"));
@@ -20581,14 +20593,14 @@ var Store = class {
       assert2(
         event.id + ".json" === name && event.schema === 1 && event.projectId === this.config.id && Array.isArray(event.parents) && event.parents.every((p) => typeof p === "string") && hash2(body) === sum,
         "INVALID_EVENT",
-        "Integridade ou projeto do evento inv\xE1lido"
+        "Invalid event integrity or project"
       );
       commandSchema.parse(event.command);
       if (existing.has(event.id))
         assert2(
           existing.get(event.id)?.hash === event.hash,
           "EVENT_CHANGED",
-          "Evento imut\xE1vel foi alterado"
+          "An immutable event was changed"
         );
       else dirty = true;
       known.set(event.id, event);
@@ -20603,7 +20615,7 @@ var Store = class {
       assert2(
         ready.length,
         "MISSING_EVENTS",
-        "Eventos pais ausentes ou ciclo. Restaure os arquivos antes de continuar."
+        "Missing parent events or a cycle. Restore the files before continuing."
       );
       for (const e of ready) {
         ordered.push(e);
@@ -20621,13 +20633,13 @@ var Store = class {
           assert2(
             !event.parents.some((id2) => failed.has(id2)),
             "CAUSAL_CONFLICT",
-            "Evento depende de uma altera\xE7\xE3o em conflito"
+            "Event depends on a conflicting change"
           );
           const serialized = JSON.stringify(event.command), previous = commands.get(event.command.commandId);
           assert2(
             previous === void 0 || previous === serialized,
             "IDEMPOTENCY_MISMATCH",
-            "commandId repetido com conte\xFAdo diferente"
+            "commandId repeated with different content"
           );
           if (previous === void 0) {
             this.apply(event);
@@ -20656,7 +20668,7 @@ var Store = class {
     assert2(
       eventIds.every((id2) => valid.has(id2)),
       "INVALID_RESOLUTION",
-      "Evento n\xE3o est\xE1 em conflito"
+      "Event is not in conflict"
     );
     atomicWrite(
       file2,
@@ -20671,7 +20683,7 @@ var Store = class {
       assert2(
         Array.isArray(ids) && ids.every((id2) => typeof id2 === "string" && /^[0-9a-f-]{36}$/.test(id2)),
         "INVALID_RESOLUTION",
-        "Resolu\xE7\xF5es inv\xE1lidas"
+        "Invalid resolutions"
       );
       const previous = this.db.prepare("SELECT event_id FROM resolutions ORDER BY event_id").all().map((r) => r.event_id);
       const next = [...new Set(ids)].sort();
@@ -20755,49 +20767,49 @@ var Store = class {
   claim(raw) {
     const claim2 = claimSchema.parse(raw);
     this.sync(false);
-    assert2(!this.conflicts().length, "MERGE_CONFLICT", "Resolva os conflitos antes de executar");
+    assert2(!this.conflicts().length, "MERGE_CONFLICT", "Resolve conflicts before starting work");
     const agent = this.transaction(() => {
       const task = this.get(claim2.taskId);
-      assert2(task?.kind === "task", "INVALID_TASK", "Card n\xE3o encontrado");
+      assert2(task?.kind === "task", "INVALID_TASK", "Card not found");
       const delivery = this.get(task.data.deliveryId);
-      assert2(delivery.data.status !== "accepted", "ACCEPTED_DELIVERY", "Entrega aceita");
-      assert2(!task.data.blocker, "BLOCKED", "Card bloqueado");
+      assert2(delivery.data.status !== "accepted", "ACCEPTED_DELIVERY", "Accepted delivery");
+      assert2(!task.data.blocker, "BLOCKED", "Card blocked");
       assert2(
         task.data.dependencies.every((id2) => {
           const d = this.get(id2);
           return this.get(d.data.deliveryId)?.data.workflow.find((s) => s.id === d.data.stageId)?.phase === "done";
         }),
         "DEPENDENCIES_PENDING",
-        "Depend\xEAncias pendentes"
+        "Pending dependencies"
       );
       assert2(
         delivery.data.workflow.find((s) => s.id === task.data.stageId)?.phase !== "done",
         "ALREADY_DONE",
-        "Card conclu\xEDdo"
+        "Card completed"
       );
       assert2(
         !this.agents().some((a) => a.agentId === claim2.agentId && a.state === "working"),
         "AGENT_ACTIVE",
-        "Agente j\xE1 registrado; use heartbeat"
+        "Agent already registered; use heartbeat"
       );
       const active = this.agents().filter((a) => a.state === "working");
-      assert2(active.length < this.config.maxAgents, "CAPACITY", "Capacidade do projeto atingida");
+      assert2(active.length < this.config.maxAgents, "CAPACITY", "Project capacity reached");
       if (claim2.teamId) {
         const team = this.get(claim2.teamId);
         assert2(
           team?.kind === "team" && team.data.deliveryId === task.data.deliveryId,
           "INVALID_TEAM",
-          "Time inv\xE1lido"
+          "Invalid team"
         );
         assert2(
           !task.data.teamId || task.data.teamId === claim2.teamId,
           "INVALID_TEAM",
-          "Time n\xE3o \xE9 respons\xE1vel por este card"
+          "Team is not responsible for this card"
         );
         assert2(
           active.filter((a) => a.teamId === claim2.teamId).length < team.data.maxAgents,
           "CAPACITY",
-          "Capacidade do time atingida"
+          "Team capacity reached"
         );
         const teams = new Set(
           active.filter((a) => this.get(a.taskId)?.data.deliveryId === task.data.deliveryId).map((a) => a.teamId).filter(Boolean)
@@ -20806,13 +20818,13 @@ var Store = class {
         assert2(
           teams.size <= this.config.maxTeamsPerDelivery,
           "CAPACITY",
-          "Limite de times paralelos atingido"
+          "Parallel team limit reached"
         );
       }
       assert2(
         claim2.role !== "executor" || !active.some((a) => a.taskId === claim2.taskId && a.role === "executor"),
         "TASK_CLAIMED",
-        "Outro executor j\xE1 possui este card"
+        "Another executor already owns this card"
       );
       const scopes = claim2.scopes.map(normalizeScope);
       claim2.scopes = scopes;
@@ -20821,7 +20833,7 @@ var Store = class {
           assert2(
             !scopes.some((s) => a.scopes.some((t) => overlap(s, t))),
             "SCOPE_CONFLICT",
-            "Escopo de escrita ocupado por " + a.name
+            "Write scope owned by " + a.name
           );
       const fence = Number(
         this.db.prepare("SELECT value FROM fences WHERE task_id=?").get(claim2.taskId)?.value ?? 0
@@ -20883,7 +20895,7 @@ var Store = class {
   heartbeat(token, activity) {
     return this.transaction(() => {
       const agent = this.agents().find((a) => a.token === token);
-      assert2(agent?.state === "working", "STALE_LEASE", "Lease expirada ou substitu\xEDda");
+      assert2(agent?.state === "working", "STALE_LEASE", "Lease expired or replaced");
       if (activity) agent.activity = activity.slice(0, 500);
       agent.expiresAt = Date.now() + agent.ttlSeconds * 1e3;
       this.db.prepare("UPDATE agents SET data=?,expires_at=? WHERE token=?").run(JSON.stringify(agent), agent.expiresAt, token);
@@ -20912,7 +20924,7 @@ var Store = class {
     };
   }
   search(query) {
-    assert2(query.length <= 200, "INVALID_SEARCH", "Consulta muito longa", 400);
+    assert2(query.length <= 200, "INVALID_SEARCH", "Search query is too long", 400);
     const words = query.match(/[\p{L}\p{N}_-]+/gu) ?? [];
     if (!words.length) return [];
     const q = words.map((w) => '"' + w + '"*').join(" AND ");
@@ -20924,7 +20936,7 @@ function normalizeScope(scope) {
   assert2(
     s === "." || !s.startsWith("/") && !s.includes(":") && !s.split("/").includes("..") && !s.includes("*"),
     "INVALID_SCOPE",
-    "Use caminhos relativos expl\xEDcitos, sem .. ou glob",
+    "Use explicit relative paths without .. or globs",
     400
   );
   return s;
@@ -20949,7 +20961,7 @@ function assertAcyclic(start, next, message) {
 }
 
 // src/version.ts
-var VERSION = "1.0.0-rc.4";
+var VERSION = "1.0.0-rc.5";
 
 // src/registry.ts
 import fs6 from "node:fs";
@@ -21042,13 +21054,13 @@ data: ${JSON.stringify({ revision: store.revision, error: error62, snapshot: sto
     const chunks = [];
     for await (const chunk of req) {
       size += chunk.length;
-      assert2(size <= 262144, "BODY_LIMIT", "Corpo excede 256 KiB", 413);
+      assert2(size <= 262144, "BODY_LIMIT", "Body exceeds 256 KiB", 413);
       chunks.push(chunk);
     }
     try {
       return JSON.parse(Buffer.concat(chunks).toString("utf8"));
     } catch {
-      throw new NexoError("INVALID_JSON", "JSON inv\xE1lido", 400);
+      throw new NexoError("INVALID_JSON", "Invalid JSON", 400);
     }
   }
   const server = http.createServer(async (req, res) => {
@@ -21062,17 +21074,17 @@ data: ${JSON.stringify({ revision: store.revision, error: error62, snapshot: sto
     );
     try {
       const url2 = new URL(req.url ?? "/", origin);
-      assert2(req.headers.host === new URL(origin).host, "HOST_DENIED", "Host inv\xE1lido", 403);
+      assert2(req.headers.host === new URL(origin).host, "HOST_DENIED", "Invalid Host", 403);
       assert2(
         !req.headers.origin || req.headers.origin === origin,
         "ORIGIN_DENIED",
-        "Origem inv\xE1lida",
+        "Invalid Origin",
         403
       );
       assert2(
         !req.headers["sec-fetch-site"] || ["same-origin", "none"].includes(String(req.headers["sec-fetch-site"])),
         "CROSS_SITE",
-        "Requisi\xE7\xE3o de outro site bloqueada",
+        "Cross-site request blocked",
         403
       );
       if (url2.pathname === "/api/health" && req.method === "GET")
@@ -21089,7 +21101,7 @@ data: ${JSON.stringify({ revision: store.revision, error: error62, snapshot: sto
         assert2(
           typeof body.ticket === "string" && (tickets.get(body.ticket) ?? 0) > Date.now(),
           "AUTH_REQUIRED",
-          "Link expirado. Abra /board novamente.",
+          "Link expired. Open /board again.",
           401
         );
         tickets.delete(body.ticket);
@@ -21102,7 +21114,7 @@ data: ${JSON.stringify({ revision: store.revision, error: error62, snapshot: sto
         return send(res, 200, { ok: true });
       }
       if (url2.pathname.startsWith("/api/")) {
-        assert2(privileged || loggedIn, "AUTH_REQUIRED", "Autentica\xE7\xE3o local necess\xE1ria", 401);
+        assert2(privileged || loggedIn, "AUTH_REQUIRED", "Local authentication required", 401);
         if (req.method === "GET" && url2.pathname === "/api/state")
           return send(res, 200, {
             ...store.state(),
@@ -21114,7 +21126,7 @@ data: ${JSON.stringify({ revision: store.revision, error: error62, snapshot: sto
         if (req.method === "GET" && url2.pathname === "/api/search")
           return send(res, 200, store.search(url2.searchParams.get("q") ?? ""));
         if (req.method === "GET" && url2.pathname === "/api/events") {
-          assert2(clients.size < 64, "CAPACITY", "Muitas conex\xF5es de board", 429);
+          assert2(clients.size < 64, "CAPACITY", "Too many board connections", 429);
           res.writeHead(200, {
             "Content-Type": "text/event-stream",
             Connection: "keep-alive",
@@ -21133,7 +21145,7 @@ data: {}
         assert2(
           req.method === "POST" && privileged,
           "READ_ONLY",
-          "Board \xE9 de acompanhamento. Altera\xE7\xF5es s\xE3o feitas pelo Claude.",
+          "The board is read-only. Make changes through Claude.",
           403
         );
         if (url2.pathname === "/api/shutdown") {
@@ -21153,7 +21165,7 @@ data: {}
             url2.pathname
           ),
           "PROJECT_UNHEALTHY",
-          error62 ?? "Erro de sincroniza\xE7\xE3o"
+          error62 ?? "Synchronization error"
         );
         if (url2.pathname === "/api/ticket") {
           const ticket = crypto3.randomBytes(32).toString("base64url");
@@ -21163,15 +21175,15 @@ data: {}
         if (url2.pathname === "/api/command") return send(res, 200, store.execute(body));
         if (url2.pathname === "/api/claim") return send(res, 200, store.claim(body));
         if (url2.pathname === "/api/heartbeat") {
-          assert2(typeof body.token === "string", "INVALID_TOKEN", "Token necess\xE1rio", 400);
+          assert2(typeof body.token === "string", "INVALID_TOKEN", "Token required", 400);
           return send(res, 200, store.heartbeat(body.token, body.activity));
         }
         if (url2.pathname === "/api/release") {
-          assert2(typeof body.token === "string", "INVALID_TOKEN", "Token necess\xE1rio", 400);
+          assert2(typeof body.token === "string", "INVALID_TOKEN", "Token required", 400);
           return send(res, 200, store.release(body.token));
         }
         if (url2.pathname === "/api/session-end") {
-          assert2(typeof body.sessionId === "string", "INVALID_SESSION", "Sess\xE3o necess\xE1ria", 400);
+          assert2(typeof body.sessionId === "string", "INVALID_SESSION", "Session required", 400);
           store.releaseSession(body.sessionId);
           return send(res, 200, { ok: true });
         }
@@ -21179,7 +21191,7 @@ data: {}
           assert2(
             typeof body.sessionId === "string" && typeof body.agentId === "string",
             "INVALID_ACTOR",
-            "Identidade necess\xE1ria",
+            "Identity required",
             400
           );
           const actors = store.agents().filter((a) => a.agentId === body.agentId && a.sessionId === body.sessionId);
@@ -21197,33 +21209,24 @@ data: {}
               assert2(
                 a,
                 "CLAIM_REQUIRED",
-                "Antes de usar ferramentas de escrita ou shell, registre este agente em um card com claim. agentId=" + body.agentId
+                "Before using write or shell tools, register this agent on a card with claim. agentId=" + body.agentId
               );
             if (a && ["Write", "Edit", "MultiEdit"].includes(body.toolName)) {
-              assert2(
-                a.role !== "reviewer",
-                "READ_ONLY_CLAIM",
-                "Revisor n\xE3o possui escopo de escrita"
-              );
-              assert2(
-                typeof body.filePath === "string",
-                "PATH_REQUIRED",
-                "Caminho de arquivo necess\xE1rio",
-                400
-              );
+              assert2(a.role !== "reviewer", "READ_ONLY_CLAIM", "Reviewers have no write scope");
+              assert2(typeof body.filePath === "string", "PATH_REQUIRED", "File path required", 400);
               const workspace = typeof body.workspace === "string" ? fs7.realpathSync.native(body.workspace) : root;
               const absolute = path6.resolve(workspace, body.filePath), relative = path6.relative(workspace, absolute).replaceAll("\\", "/");
               assert2(
                 relative && !relative.startsWith("../") && !path6.isAbsolute(relative),
                 "SCOPE_DENIED",
-                "Arquivo fora do workspace"
+                "File is outside the workspace"
               );
               assert2(
                 a.scopes.some(
                   (scope) => scope === "." || relative === scope || relative.startsWith(scope + "/")
                 ),
                 "SCOPE_DENIED",
-                "Arquivo fora do escopo registrado"
+                "File is outside the registered scope"
               );
               let parent = path6.dirname(absolute);
               while (parent !== workspace) {
@@ -21231,7 +21234,7 @@ data: {}
                   assert2(
                     !fs7.lstatSync(parent).isSymbolicLink(),
                     "SYMLINK_DENIED",
-                    "N\xE3o escreva atrav\xE9s de symlink"
+                    "Do not write through symlinks"
                   );
                 const up = path6.dirname(parent);
                 if (up === parent) break;
@@ -21241,13 +21244,13 @@ data: {}
                 assert2(
                   !fs7.lstatSync(absolute).isSymbolicLink(),
                   "SYMLINK_DENIED",
-                  "N\xE3o escreva atrav\xE9s de symlink"
+                  "Do not write through symlinks"
                 );
             }
             if (a)
               store.heartbeat(
                 a.token,
-                body.toolName ? `Usando ${String(body.toolName).slice(0, 80)}` : void 0
+                body.toolName ? `Using ${String(body.toolName).slice(0, 80)}` : void 0
               );
           }
           return send(res, 200, { ok: true });
@@ -21260,7 +21263,7 @@ data: {}
           assert2(
             Array.isArray(body.eventIds) && body.eventIds.every((v) => typeof v === "string"),
             "INVALID_RESOLUTION",
-            "eventIds necess\xE1rios",
+            "eventIds required",
             400
           );
           store.resolve(body.eventIds);
@@ -21268,14 +21271,14 @@ data: {}
         }
         return send(res, 404, { error: "NOT_FOUND" });
       }
-      assert2(req.method === "GET" || req.method === "HEAD", "METHOD", "M\xE9todo inv\xE1lido", 405);
+      assert2(req.method === "GET" || req.method === "HEAD", "METHOD", "Invalid method", 405);
       const files = {
         "/": ["index.html", "text/html; charset=utf-8"],
         "/app.js": ["app.js", "application/javascript"],
         "/app.css": ["app.css", "text/css; charset=utf-8"]
       };
       const entry = files[url2.pathname];
-      assert2(entry, "NOT_FOUND", "Arquivo n\xE3o encontrado", 404);
+      assert2(entry, "NOT_FOUND", "File not found", 404);
       const content = fs7.readFileSync(path6.join(assets, entry[0]));
       res.writeHead(200, { "Content-Type": entry[1] });
       res.end(req.method === "HEAD" ? void 0 : content);
@@ -21283,7 +21286,7 @@ data: {}
       const err = e;
       send(res, err.status ?? (err.name === "ZodError" ? 400 : 500), {
         error: err.code ?? "INVALID_REQUEST",
-        message: err instanceof Error ? err.message : "Erro interno"
+        message: err instanceof Error ? err.message : "Internal error"
       });
     }
   });
@@ -21320,7 +21323,7 @@ data: {}
       assert2(
         config2.id === store.config.id,
         "PROJECT_CHANGED",
-        "A identidade do projeto mudou. Reinicie o servi\xE7o no diret\xF3rio correto."
+        "Project identity changed. Restart the service in the correct directory."
       );
       if (JSON.stringify(config2) !== JSON.stringify(store.config)) {
         store.config = config2;

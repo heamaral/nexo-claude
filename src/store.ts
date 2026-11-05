@@ -72,7 +72,7 @@ export class Store {
       assert(
         !version || version.value === '1',
         'SCHEMA_VERSION',
-        'Versão de banco não suportada. Atualize o Nexo.',
+        'Unsupported database version. Update Nexo.',
       );
       this.db.prepare('INSERT OR IGNORE INTO meta VALUES(?,?)').run('schema', '1');
       this.snapshots = new Snapshots(path.join(root, '.nexo', 'project.sqlite'), () =>
@@ -149,17 +149,17 @@ export class Store {
     assert(
       command.op === 'create' ? !current : current,
       'NOT_FOUND',
-      command.op === 'create' ? 'ID já existe' : 'Entidade não encontrada',
+      command.op === 'create' ? 'ID already exists' : 'Entity not found',
     );
     assert(
       (current?.version ?? 0) === command.expectedVersion,
       'VERSION_CONFLICT',
-      'Versão mudou. Consulte o estado e replaneje.',
+      'Version changed. Read state and replan.',
     );
     assert(
       !current || current.kind === command.kind,
       'KIND_MISMATCH',
-      'Tipo da entidade não corresponde',
+      'Entity kind does not match',
     );
     const input = { ...(current?.data ?? {}), ...command.data, id: command.id };
     const data: any = schemaFor(command.kind).parse(input);
@@ -167,30 +167,34 @@ export class Store {
       assert(
         data.deliveryId === current.data.deliveryId,
         'IMMUTABLE_SCOPE',
-        'Não mova cards ou times entre entregas',
+        'Do not move cards or teams between deliveries',
       );
     }
     if (command.kind === 'delivery') {
       assert(
         current?.data.status !== 'accepted',
         'ACCEPTED_DELIVERY',
-        'Entrega aceita é imutável. Crie uma nova entrega.',
+        'Accepted deliveries are immutable. Create a new delivery.',
       );
       assert(
         command.op === 'accept' || data.status !== 'accepted',
         'ACCEPT_REQUIRED',
-        'Use accept para aceitar a entrega',
+        'Use accept to accept the delivery',
       );
       if (data.revisionOf) {
         const previous = this.get(data.revisionOf);
-        assert(previous?.kind === 'delivery', 'INVALID_REVISION', 'Entrega anterior não existe');
+        assert(
+          previous?.kind === 'delivery',
+          'INVALID_REVISION',
+          'Previous delivery does not exist',
+        );
       }
       const tasks = this.all('task').filter((t) => t.data.deliveryId === data.id);
       for (const t of tasks)
         assert(
           data.workflow.some((s: any) => s.id === t.data.stageId),
           'STAGE_IN_USE',
-          'Uma etapa em uso não pode ser removida',
+          'A stage in use cannot be removed',
         );
       if (current) {
         for (const t of tasks) {
@@ -199,7 +203,7 @@ export class Store {
           assert(
             old?.phase === next?.phase,
             'STAGE_IN_USE',
-            'Não altere a semântica de uma etapa em uso; crie outra etapa',
+            'Do not change the meaning of a stage in use; create another stage',
           );
         }
       }
@@ -210,33 +214,37 @@ export class Store {
               (t) => data.workflow.find((s: any) => s.id === t.data.stageId)?.phase === 'done',
             ),
           'INCOMPLETE_DELIVERY',
-          'Todos os cards precisam estar concluídos',
+          'All cards must be completed',
         );
-        assert(data.result?.trim(), 'RESULT_REQUIRED', 'Registre o resultado da entrega');
+        assert(data.result?.trim(), 'RESULT_REQUIRED', 'Record the delivery result');
         assert(
           !this.agents().some((a) => tasks.some((t) => t.id === a.taskId) && a.state === 'working'),
           'ACTIVE_AGENTS',
-          'Encerre os agentes antes de aceitar',
+          'Release the agents before accepting',
         );
         data.status = 'accepted';
       }
     } else {
       const delivery = this.get(data.deliveryId);
-      assert(delivery?.kind === 'delivery', 'INVALID_DELIVERY', 'Entrega não encontrada');
-      assert(delivery.data.status !== 'accepted', 'ACCEPTED_DELIVERY', 'Entrega aceita é imutável');
-      assert(command.op !== 'accept', 'INVALID_OPERATION', 'Use update para cards e times');
+      assert(delivery?.kind === 'delivery', 'INVALID_DELIVERY', 'Delivery not found');
+      assert(
+        delivery.data.status !== 'accepted',
+        'ACCEPTED_DELIVERY',
+        'Accepted deliveries are immutable',
+      );
+      assert(command.op !== 'accept', 'INVALID_OPERATION', 'Use update for cards and teams');
       if (command.kind === 'task') {
         assert(
           delivery.data.workflow.some((s: any) => s.id === data.stageId),
           'INVALID_STAGE',
-          'Etapa não existe na entrega',
+          'Stage does not exist in the delivery',
         );
         if (data.teamId) {
           const team = this.get(data.teamId);
           assert(
             team?.kind === 'team' && team.data.deliveryId === data.deliveryId,
             'INVALID_TEAM',
-            'Time não pertence à entrega',
+            'Team does not belong to the delivery',
           );
         }
         if (data.parentId) {
@@ -244,23 +252,23 @@ export class Store {
           assert(
             parent?.kind === 'task' && parent.data.deliveryId === data.deliveryId,
             'INVALID_PARENT',
-            'Card pai não pertence à entrega',
+            'Parent card does not belong to the delivery',
           );
           assert(
             this.get(parent.data.deliveryId)?.data.workflow.find(
               (s: any) => s.id === parent.data.stageId,
             )?.phase !== 'done',
             'PARENT_DONE',
-            'Reabra o pai antes de alterar sua composição',
+            'Reopen the parent before changing its composition',
           );
         }
         assert(
           new Set(data.dependencies).size === data.dependencies.length,
           'DUPLICATE_DEPENDENCY',
-          'Dependências duplicadas',
+          'Duplicate dependencies',
         );
         for (const dep of data.dependencies)
-          assert(this.get(dep)?.kind === 'task', 'INVALID_DEPENDENCY', 'Dependência não existe');
+          assert(this.get(dep)?.kind === 'task', 'INVALID_DEPENDENCY', 'Dependency does not exist');
         const tasks = new Map<string, any>([[data.id, data]]);
         const taskData = (id: string) => {
           if (!tasks.has(id)) tasks.set(id, this.get(id)?.data);
@@ -287,12 +295,12 @@ export class Store {
           assertAcyclic(
             data.id,
             (node) => (taskData(node)?.parentId ? [taskData(node).parentId] : []),
-            'Ciclo na hierarquia ou nas dependências',
+            'Cycle in hierarchy or dependencies',
           );
           assertAcyclic(
             data.id,
             (node) => taskData(node)?.dependencies ?? [],
-            'Ciclo na hierarquia ou nas dependências',
+            'Cycle in hierarchy or dependencies',
           );
           assertAcyclic(
             data.id,
@@ -300,7 +308,7 @@ export class Store {
               ...(taskData(node)?.dependencies ?? []),
               ...childData(node).map((t) => t.id),
             ],
-            'Dependência bloqueia a própria hierarquia',
+            'Dependency blocks its own hierarchy',
           );
         }
         const isDone = (t: any) => {
@@ -309,30 +317,34 @@ export class Store {
         };
         const phase = delivery.data.workflow.find((s: any) => s.id === data.stageId).phase;
         if (phase === 'done' || phase === 'active') {
-          assert(!data.blocker, 'BLOCKED', 'Resolva o impedimento antes de executar ou concluir');
+          assert(
+            !data.blocker,
+            'BLOCKED',
+            'Resolve the blocker before starting or completing work',
+          );
           assert(
             data.dependencies.every((dep: string) => isDone(taskData(dep))),
             'DEPENDENCIES_PENDING',
-            'Dependências precisam ser concluídas',
+            'Dependencies must be completed',
           );
         }
         if (phase === 'done') {
           assert(
             childData(data.id).every(isDone),
             'CHILDREN_PENDING',
-            'Subcards precisam ser concluídos',
+            'Subtasks must be completed',
           );
           assert(
             data.result.trim() && data.evidence.length,
             'EVIDENCE_REQUIRED',
-            'Conclusão exige resultado e evidência',
+            'Completion requires a result and evidence',
           );
           const gates = delivery.data.workflow.filter((s: any) => s.gate);
           if (gates.length)
             assert(
               data.evidence.some((e: any) => e.commit),
               'COMMIT_REQUIRED',
-              'A entrega com gate exige evidência ligada ao commit validado',
+              'A gated delivery requires evidence linked to the validated commit',
             );
         }
         // Reopening a prerequisite would invalidate completed dependents or ancestors.
@@ -344,7 +356,7 @@ export class Store {
                 (t) => isDone(t) && (t.dependencies.includes(data.id) || t.id === data.parentId),
               ),
             'COMPLETED_DEPENDENT',
-            'Reabra os dependentes concluídos antes deste card',
+            'Reopen completed dependents before this card',
           );
         }
       }
@@ -378,7 +390,7 @@ export class Store {
     assert(
       !this.conflicts().length,
       'MERGE_CONFLICT',
-      'Eventos divergentes aguardam resolução. Execute doctor.',
+      'Divergent events require resolution. Run doctor.',
     );
     const duplicate = this.db
       .prepare('SELECT event FROM events WHERE command_id=?')
@@ -389,7 +401,7 @@ export class Store {
       assert(
         JSON.stringify(original.command) === JSON.stringify(clean),
         'IDEMPOTENCY_MISMATCH',
-        'commandId reutilizado com outro conteúdo',
+        'commandId reused with different content',
       );
       this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
@@ -402,7 +414,7 @@ export class Store {
         assert(
           command.leaseToken === claims[0].token,
           'LEASE_REQUIRED',
-          'Card em execução exige a lease atual',
+          'An active card requires its current lease',
         );
       if (command.leaseToken)
         assert(
@@ -411,7 +423,7 @@ export class Store {
               a.token === command.leaseToken && a.taskId === command.id && a.state === 'working',
           ),
           'STALE_LEASE',
-          'Lease expirada ou substituída',
+          'Lease expired or replaced',
         );
       if (command.kind === 'task') {
         const current = this.get(command.id);
@@ -423,7 +435,7 @@ export class Store {
                 a.taskId === command.id && a.state === 'working' && a.token !== command.leaseToken,
             ),
             'ACTIVE_COLLABORATORS',
-            'Aguarde os colaboradores liberarem o card',
+            'Wait for collaborators to release the card',
           );
       }
       if (
@@ -438,7 +450,7 @@ export class Store {
           assert(
             command.leaseToken,
             'LEASE_REQUIRED',
-            'Card executado exige uma lease válida para concluir',
+            'A previously claimed card requires a valid lease for completion',
           );
       }
       const { leaseToken: _, ...clean } = command;
@@ -509,7 +521,7 @@ export class Store {
       assert(
         stat.isFile() && !stat.isSymbolicLink() && stat.size < 1024 * 1024,
         'INVALID_EVENT',
-        'Arquivo de evento inválido',
+        'Invalid event file',
       );
       const stamp = stat.mtimeMs + ':' + stat.ctimeMs + ':' + stat.size,
         cached = this.fileCache.get(name);
@@ -526,14 +538,14 @@ export class Store {
           event.parents.every((p) => typeof p === 'string') &&
           hash(body) === sum,
         'INVALID_EVENT',
-        'Integridade ou projeto do evento inválido',
+        'Invalid event integrity or project',
       );
       commandSchema.parse(event.command);
       if (existing.has(event.id))
         assert(
           existing.get(event.id)?.hash === event.hash,
           'EVENT_CHANGED',
-          'Evento imutável foi alterado',
+          'An immutable event was changed',
         );
       else dirty = true;
       known.set(event.id, event);
@@ -553,7 +565,7 @@ export class Store {
       assert(
         ready.length,
         'MISSING_EVENTS',
-        'Eventos pais ausentes ou ciclo. Restaure os arquivos antes de continuar.',
+        'Missing parent events or a cycle. Restore the files before continuing.',
       );
       for (const e of ready) {
         ordered.push(e);
@@ -572,14 +584,14 @@ export class Store {
           assert(
             !event.parents.some((id) => failed.has(id)),
             'CAUSAL_CONFLICT',
-            'Evento depende de uma alteração em conflito',
+            'Event depends on a conflicting change',
           );
           const serialized = JSON.stringify(event.command),
             previous = commands.get(event.command.commandId);
           assert(
             previous === undefined || previous === serialized,
             'IDEMPOTENCY_MISMATCH',
-            'commandId repetido com conteúdo diferente',
+            'commandId repeated with different content',
           );
           if (previous === undefined) {
             this.apply(event);
@@ -619,7 +631,7 @@ export class Store {
     assert(
       eventIds.every((id) => valid.has(id)),
       'INVALID_RESOLUTION',
-      'Evento não está em conflito',
+      'Event is not in conflict',
     );
     atomicWrite(
       file,
@@ -635,7 +647,7 @@ export class Store {
         Array.isArray(ids) &&
           ids.every((id) => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id)),
         'INVALID_RESOLUTION',
-        'Resoluções inválidas',
+        'Invalid resolutions',
       );
       const previous = this.db
         .prepare('SELECT event_id FROM resolutions ORDER BY event_id')
@@ -732,13 +744,13 @@ export class Store {
   claim(raw: unknown) {
     const claim = claimSchema.parse(raw);
     this.sync(false);
-    assert(!this.conflicts().length, 'MERGE_CONFLICT', 'Resolva os conflitos antes de executar');
+    assert(!this.conflicts().length, 'MERGE_CONFLICT', 'Resolve conflicts before starting work');
     const agent = this.transaction(() => {
       const task = this.get(claim.taskId);
-      assert(task?.kind === 'task', 'INVALID_TASK', 'Card não encontrado');
+      assert(task?.kind === 'task', 'INVALID_TASK', 'Card not found');
       const delivery = this.get(task.data.deliveryId)!;
-      assert(delivery.data.status !== 'accepted', 'ACCEPTED_DELIVERY', 'Entrega aceita');
-      assert(!task.data.blocker, 'BLOCKED', 'Card bloqueado');
+      assert(delivery.data.status !== 'accepted', 'ACCEPTED_DELIVERY', 'Accepted delivery');
+      assert(!task.data.blocker, 'BLOCKED', 'Card blocked');
       assert(
         task.data.dependencies.every((id: string) => {
           const d = this.get(id)!;
@@ -748,36 +760,36 @@ export class Store {
           );
         }),
         'DEPENDENCIES_PENDING',
-        'Dependências pendentes',
+        'Pending dependencies',
       );
       assert(
         delivery.data.workflow.find((s: any) => s.id === task.data.stageId)?.phase !== 'done',
         'ALREADY_DONE',
-        'Card concluído',
+        'Card completed',
       );
       assert(
         !this.agents().some((a) => a.agentId === claim.agentId && a.state === 'working'),
         'AGENT_ACTIVE',
-        'Agente já registrado; use heartbeat',
+        'Agent already registered; use heartbeat',
       );
       const active = this.agents().filter((a) => a.state === 'working');
-      assert(active.length < this.config.maxAgents, 'CAPACITY', 'Capacidade do projeto atingida');
+      assert(active.length < this.config.maxAgents, 'CAPACITY', 'Project capacity reached');
       if (claim.teamId) {
         const team = this.get(claim.teamId);
         assert(
           team?.kind === 'team' && team.data.deliveryId === task.data.deliveryId,
           'INVALID_TEAM',
-          'Time inválido',
+          'Invalid team',
         );
         assert(
           !task.data.teamId || task.data.teamId === claim.teamId,
           'INVALID_TEAM',
-          'Time não é responsável por este card',
+          'Team is not responsible for this card',
         );
         assert(
           active.filter((a) => a.teamId === claim.teamId).length < team.data.maxAgents,
           'CAPACITY',
-          'Capacidade do time atingida',
+          'Team capacity reached',
         );
         const teams = new Set(
           active
@@ -789,14 +801,14 @@ export class Store {
         assert(
           teams.size <= this.config.maxTeamsPerDelivery,
           'CAPACITY',
-          'Limite de times paralelos atingido',
+          'Parallel team limit reached',
         );
       }
       assert(
         claim.role !== 'executor' ||
           !active.some((a) => a.taskId === claim.taskId && a.role === 'executor'),
         'TASK_CLAIMED',
-        'Outro executor já possui este card',
+        'Another executor already owns this card',
       );
       const scopes = claim.scopes.map(normalizeScope);
       claim.scopes = scopes;
@@ -805,7 +817,7 @@ export class Store {
           assert(
             !scopes.some((s) => a.scopes.some((t) => overlap(s, t))),
             'SCOPE_CONFLICT',
-            'Escopo de escrita ocupado por ' + a.name,
+            'Write scope owned by ' + a.name,
           );
       const fence =
         Number(
@@ -876,7 +888,7 @@ export class Store {
   heartbeat(token: string, activity?: string) {
     return this.transaction(() => {
       const agent = this.agents().find((a) => a.token === token);
-      assert(agent?.state === 'working', 'STALE_LEASE', 'Lease expirada ou substituída');
+      assert(agent?.state === 'working', 'STALE_LEASE', 'Lease expired or replaced');
       if (activity) agent.activity = activity.slice(0, 500);
       agent.expiresAt = Date.now() + agent.ttlSeconds * 1000;
       this.db
@@ -907,7 +919,7 @@ export class Store {
     };
   }
   search(query: string) {
-    assert(query.length <= 200, 'INVALID_SEARCH', 'Consulta muito longa', 400);
+    assert(query.length <= 200, 'INVALID_SEARCH', 'Search query is too long', 400);
     const words = query.match(/[\p{L}\p{N}_-]+/gu) ?? [];
     if (!words.length) return [];
     const q = words.map((w) => '"' + w + '"*').join(' AND ');
@@ -923,7 +935,7 @@ function normalizeScope(scope: string) {
     s === '.' ||
       (!s.startsWith('/') && !s.includes(':') && !s.split('/').includes('..') && !s.includes('*')),
     'INVALID_SCOPE',
-    'Use caminhos relativos explícitos, sem .. ou glob',
+    'Use explicit relative paths without .. or globs',
     400,
   );
   return s;

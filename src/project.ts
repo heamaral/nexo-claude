@@ -44,14 +44,14 @@ export function findProject(cwd = process.cwd()): string {
     if (up === current) break;
     current = up;
   }
-  throw new Error('Projeto não inicializado. Execute /nexo:init neste diretório.');
+  throw new Error('Project is not initialized. Run /nexo:init in this directory.');
 }
 export function loadConfig(root: string): Config {
   const dir = path.join(root, '.nexo');
   assert(
     !fs.lstatSync(dir).isSymbolicLink(),
     'UNSAFE_PATH',
-    '.nexo não pode ser um link simbólico',
+    '.nexo must not be a symbolic link',
     400,
   );
   return configSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, 'project.json'), 'utf8')));
@@ -75,7 +75,7 @@ export function initialize(cwd = process.cwd(), name?: string, options: { exact?
   assert(
     !fs.lstatSync(dir).isSymbolicLink(),
     'UNSAFE_PATH',
-    '.nexo não pode ser um link simbólico',
+    '.nexo must not be a symbolic link',
     400,
   );
   const config: Config = {
@@ -120,7 +120,7 @@ export function localDir(root: string) {
   assert(
     !fs.lstatSync(dir).isSymbolicLink(),
     'UNSAFE_PATH',
-    'local não pode ser link simbólico',
+    'local must not be a symbolic link',
     400,
   );
   return dir;
@@ -131,7 +131,7 @@ export function safeEventsDir(root: string) {
   assert(
     !fs.lstatSync(dir).isSymbolicLink(),
     'UNSAFE_PATH',
-    'events não pode ser link simbólico',
+    'events must not be a symbolic link',
     400,
   );
   return dir;

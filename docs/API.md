@@ -1,36 +1,37 @@
-# Modelo e API MCP
+# Data model and MCP API
 
-Todos os IDs de domínio aceitam até 80 caracteres alfanuméricos, `_` e `-`. IDs de entidades são únicos no projeto, inclusive entre tipos. `commandId` precisa ser único por intenção e deve ser reutilizado apenas ao repetir exatamente a mesma requisição. `expectedVersion: 0` cria; updates usam a versão lida em `state`.
+Domain IDs accept up to 80 alphanumeric characters, `_` and `-`. Entity IDs are unique across all kinds within a project. Use a unique `commandId` per intent and reuse it only when retrying exactly the same request. `expectedVersion: 0` creates an entity; updates use the version read from `state`.
 
-## Entidades
+## Entities
 
-| Entidade | Campos principais                                                                                                         |
+| Entity   | Main fields                                                                                                               |
 | -------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Delivery | id, title, description, workflow[], status, result, revisionOf?                                                           |
 | Task     | id, deliveryId, parentId?, teamId?, title, description, stageId, dependencies[], criteria[], blocker?, result, evidence[] |
 | Team     | id, deliveryId, title, description, workspace, engine, maxAgents                                                          |
 
-Workflow: `{id, name, phase: queued|active|review|done, gate?: string}`. A entrega guarda o próprio workflow; é possível acrescentar uma etapa/gate enquanto aberta. Etapas em uso não podem ser removidas ou ter sua semântica trocada. Para renomear ou adicionar gates, atualize o workflow completo usando a versão atual da entrega.
+A workflow stage is `{id, name, phase: queued|active|review|done, gate?: string}`. Each delivery owns its workflow. Stages and gates may be added while it is open. A stage in use cannot be removed or have its meaning changed. To rename stages or add gates, update the complete workflow with the current delivery version.
 
-`gate` é a descrição de um critério de validação. Nesta versão, um workflow com gate exige ao menos um SHA nas evidências de cada card concluído; não há um motor declarativo que execute pipelines ou interprete automaticamente o texto do gate. O planner e o reviewer verificam o critério e registram evidências. Projetos que precisam de aprovação humana podem modelar um card de aprovação dependente e mantê-lo pendente até receber a decisão.
+`gate` describes a validation criterion. A workflow with a gate requires at least one commit SHA in the evidence for every completed card. There is no declarative engine that runs pipelines or interprets the gate text automatically. The planner and reviewer check the criterion and record evidence. For human approval, model a dependent approval card and keep it pending until a decision is received.
 
-Entrega aceita é imutável. `accept` exige todos os cards concluídos, resultado e ausência de agentes trabalhando. Nova solicitação cria nova entrega; `revisionOf` preserva vínculo com a anterior.
+Accepted deliveries are immutable. `accept` requires all cards to be completed, a result, and no working agents. A new request creates a new delivery; `revisionOf` can link it to an earlier one.
 
-## Ferramentas
+## Tools
 
-| Ferramenta | Uso                                                            |
-| ---------- | -------------------------------------------------------------- |
-| init       | Inicializa apenas o projeto corrente                           |
-| state      | Snapshot autoritativo, versões, agentes, conflitos e saúde     |
-| command    | create/update/accept com validação e idempotência              |
-| claim      | Registra agente, escopos e lease; inicia card quando aplicável |
-| heartbeat  | Renova lease não expirada e atividade                          |
-| release    | Remove vínculo de agente sem concluir card                     |
-| board_open | Gera login local de uso único e abre navegador                 |
-| search     | Consulta FTS5 local, até 50 resultados                         |
-| snapshot   | Gera SQLite fechado antes de commit                            |
+| Tool              | Purpose                                                           |
+| ----------------- | ----------------------------------------------------------------- |
+| init              | Initialize the current project explicitly                         |
+| state             | Authoritative state, versions, agents, conflicts and health       |
+| command           | Validated, idempotent create/update/accept                        |
+| claim             | Register an agent, scopes and lease; start a card when applicable |
+| heartbeat         | Renew a live lease and update activity                            |
+| release           | Remove an agent association without completing its card           |
+| board_open        | Generate a one-time local login and open the browser              |
+| search            | Local FTS5 search, up to 50 results                               |
+| snapshot          | Flush a closed SQLite snapshot before committing                  |
+| resolve_conflicts | Explicitly acknowledge reviewed losing events                     |
 
-Exemplo de card criado:
+Example card creation:
 
 ```json
 {
@@ -42,20 +43,20 @@ Exemplo de card criado:
   "expectedVersion": 0,
   "data": {
     "deliveryId": "recovery",
-    "title": "Implementar API",
+    "title": "Implement API",
     "stageId": "backlog",
     "dependencies": ["contract"],
-    "criteria": ["Token não pode ser reutilizado"]
+    "criteria": ["Token cannot be reused"]
   }
 }
 ```
 
-Claim retorna token temporário e fence monotônico por card. Não salve tokens em descrições, evidências, prompts commitados ou Git. Use os IDs nativos injetados pelo hook e `sessionId` para que a limpeza automática funcione. `parentAgentId` permite a árvore de agentes. Role executor é único; colaboradores podem participar com escopos distintos; reviewers são declarados somente leitura. Todos contam na capacidade.
+`claim` returns a temporary token and a monotonically increasing fence per card. Never put tokens in descriptions, evidence, committed prompts or Git. Use the native IDs supplied by hooks and `sessionId` so automatic cleanup can work. `parentAgentId` supports an agent hierarchy. There is one executor; collaborators can participate with distinct scopes, and reviewers declare read-only work. Every registered agent counts toward capacity.
 
-Escopos são arquivos/diretórios relativos explícitos. `.` representa todo o workspace. Não são aceitos glob, caminhos absolutos ou `..`. O sistema bloqueia sobreposição de escopos de escritores no board coordenador. Hooks de Write/Edit verificam caminho; shell continua dependente das permissões e disciplina de escopo do Claude.
+Scopes are explicit relative files/directories. `.` means the entire workspace. Globs, absolute paths and `..` are rejected. Overlapping writer scopes are blocked in the coordinator board. Write/Edit hooks check paths; shell behavior still depends on Claude permissions and adherence to declared scopes.
 
-Para concluir: atualize stageId para uma fase done com result/evidence e leaseToken vigente. O token não vai para o evento. Se outro colaborador estiver trabalhando, aguarde sua liberação. Lease expirada não é renovada; consulte estado, revalide alterações e obtenha outra claim.
+To complete work, update `stageId` to a done phase with `result`, `evidence` and the current `leaseToken`. The token is excluded from the event. Wait for other collaborators to release their claims. Expired leases cannot be renewed: read state, revalidate changes and obtain a new claim.
 
-## API HTTP interna
+## Internal HTTP API
 
-Somente loopback. Autorização bearer para ferramentas. O browser usa ticket de uso único, cookie HttpOnly SameSite Strict e somente leitura. Endpoints não são API pública estável: `/api/state`, `/api/events`, `/api/command`, `/api/claim`, `/api/heartbeat`, `/api/release`, `/api/snapshot`, `/api/hook`, `/api/resolve`. Não acesse `server.json` a partir de páginas de terceiros.
+Loopback only. Tools use bearer authorization. The browser uses a one-time ticket and an HttpOnly SameSite Strict cookie and is read-only. Endpoints are not a stable public API: `/api/state`, `/api/events`, `/api/command`, `/api/claim`, `/api/heartbeat`, `/api/release`, `/api/snapshot`, `/api/hook`, `/api/resolve`. Never expose `server.json` to third-party pages.

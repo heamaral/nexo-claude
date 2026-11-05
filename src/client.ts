@@ -61,7 +61,7 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
       release();
     } else if (previous && processAlive(previous.pid))
       throw new Error(
-        'O processo do board ainda existe, mas não responde. Consulte .nexo/local/server.log; Nexo não inicia um segundo escritor.',
+        'The board process is still running but is not responding. Check .nexo/local/server.log; Nexo will not start a second writer.',
       );
     const log = fs.openSync(path.join(dir, 'server.log'), 'a');
     const child = spawn(
@@ -87,7 +87,7 @@ export async function ensureServer(root = findProject()): Promise<Registry> {
       if (reusable(value)) return value!;
       await wait(100);
     }
-    throw new Error('O board não iniciou. Consulte .nexo/local/server.log e /nexo:doctor.');
+    throw new Error('The board did not start. Check .nexo/local/server.log and /nexo:doctor.');
   } finally {
     releaseStartup();
   }

@@ -1,48 +1,48 @@
-# Arquitetura e operação
+# Architecture and operation
 
-## Dono dos dados
+## Data ownership
 
-Um projeto é o diretório mais próximo que contém `.nexo/project.json`. A inicialização explícita usa a raiz Git atual; fora de Git, usa o diretório atual. A busca escolhe o manifesto mais próximo, permitindo projetos aninhados já inicializados. Para criar um board independente dentro de um monorepo, use o MCP init com directoryMode=directory ou o CLI init --here no pacote desejado.
+A project is the nearest directory containing `.nexo/project.json`. Explicit initialization uses the current Git root, or the current directory outside Git. Discovery selects the closest manifest, allowing existing nested projects. To create an independent board inside a monorepo, use MCP init with `directoryMode=directory` or CLI `init --here` in the desired package.
 
-O plugin instalado não contém dados de projeto. Seu runtime empacotado pode ser atualizado sem mover o banco. `.nexo/local/` é estado da máquina e nunca deve entrar no Git. Clones e worktrees não herdam agentes ativos. A configuração `project.json` tem schema versionado e limites por projeto; alterações são revisadas no Git e carregadas na próxima inicialização do serviço.
+The installed plugin contains no project data. Its bundled runtime can be updated without moving the database. `.nexo/local/` belongs to the machine and must never enter Git. Clones and worktrees do not inherit active agents. `project.json` has a versioned schema and project capacity settings; configuration is reviewed in Git and the running service reconciles changes.
 
-## Caminho de uma alteração
+## Path of a change
 
-1. MCP encaminha um comando ao serviço único do diretório, autenticado por bearer token local.
-2. O serviço valida schema, versão esperada, histórico sem conflitos, hierarquia, dependências, conclusão, evidência e lease.
-3. Uma transação SQLite grava o novo estado e o evento em uma outbox. Constraints e `BEGIN IMMEDIATE` serializam claims.
-4. O evento é exportado para um arquivo novo com escrita temporária, fsync e rename. O comando só retorna depois da exportação; uma queda antes dela é recuperada pela outbox no reinício.
-5. O serviço notifica os clientes por SSE. O browser busca o snapshot atual completo; a reconexão faz o mesmo, inclusive após reinício da instância.
-6. Uma fila por diretório reconstrói o SQLite de distribuição em arquivo separado, fecha e valida o arquivo e o renomeia sobre `project.sqlite`. Alterações duráveis usam debounce de 500 ms, com espera máxima de 5 s para iniciar uma tentativa; heartbeat/release não geram snapshots. O comando `snapshot` aguarda publicação até a geração visível em sua chamada. Bloqueios de substituição têm retry assíncrono limitado e retomada automática; não tornam o banco ativo insalubre. Consulte [os detalhes operacionais](CONCURRENCY.md).
+1. MCP forwards a command to the single service for the directory using a local bearer token.
+2. The service validates the schema, expected version, conflict-free history, hierarchy, dependencies, completion, evidence and lease.
+3. A SQLite transaction records the new state and an outbox event. Constraints and `BEGIN IMMEDIATE` serialize claims.
+4. The event is exported to a new file through temporary writing, fsync and rename. The command returns only after export. A crash before export is recovered from the committed outbox on restart.
+5. SSE notifies browser clients. The browser fetches complete current state, including on reconnection after an instance restart.
+6. A queue rebuilds the distributable SQLite in a separate file, closes and validates it, then renames it over `project.sqlite`. Durable changes debounce for 500 ms with a 5-second maximum initial wait. Heartbeats and releases do not create snapshots. Explicit `snapshot` waits through the generation visible at invocation. File replacement failures have bounded asynchronous retries and automatic recovery; they do not make the live database unhealthy. See [concurrency details](CONCURRENCY.md).
 
-As tabelas de runtime não são copiadas para o snapshot. O schema do snapshot inclui tabelas vazias de agentes para permitir inspeção consistente, mas não inclui tokens, claims ou PIDs. O live SQLite em `local/` usa WAL e synchronous FULL. Nenhum arquivo WAL é commitado.
+Runtime rows are not copied. The snapshot has empty agent tables for consistent inspection, but no leases, tokens or PIDs. Live SQLite in `local/` uses WAL and `synchronous=FULL`. WAL files are never committed.
 
-## Git, causalidade e recuperação
+## Git, causality and recovery
 
-Cada evento tem UUID, projeto, schema, comando idempotente, pais causais e SHA-256 do envelope. O hash detecta alterações acidentais; não é assinatura criptográfica de autoria. Os pais formam um DAG; reprodução topológica com desempate por UUID é determinística. Atualizações concorrentes da mesma versão geram conflito explícito. O perdedor não é aplicado silenciosamente.
+Every event has a UUID, project ID, schema, idempotent command, causal parents and SHA-256 envelope hash. The hash detects accidental changes; it is not a cryptographic author signature. Parents form a DAG. Topological replay with UUID tie-breaking is deterministic. Concurrent updates to the same version produce an explicit conflict; the losing change is not silently applied.
 
-Após um merge, mantenha a união dos eventos de ambas as branches. Eventos pais ausentes bloqueiam importação. Nunca remova um evento isolado com descendentes. Um checkout para uma branch anterior deve remover toda a cauda causal que não pertence àquela branch. O serviço refaz a projeção a partir dos arquivos presentes e invalida leases, porque a base de trabalho pode ter mudado.
+After a merge, retain the union of events from both branches. Missing parents block import. Never remove one event while retaining its descendants. A checkout of an earlier branch must remove the complete causal tail absent from that branch. The service rebuilds the projection from present files and invalidates leases because their work basis may have changed.
 
-Procedimento de recuperação:
+Recovery procedure:
 
-1. Preserve uma cópia de `.nexo/`; resolva arquivos JSON conflitantes/ausentes no Git.
-2. Execute `/nexo:doctor` ou `node <plugin>/runtime/cli.mjs doctor --project <raiz>`.
-3. Se houver conflitos semânticos de versão, revise os eventos e o estado resultante. `resolve <event-id>` reconhece explicitamente o perdedor em `resolutions.json`.
-4. Reaplique a intenção desejada como um novo comando usando a versão atual. Reconhecer um perdedor não aplica seu conteúdo.
-5. Execute `snapshot`; adicione os eventos, resoluções e SQLite reconstruído ao commit.
+1. Preserve a copy of `.nexo/`; resolve conflicting or missing JSON files in Git.
+2. Run `/nexo:doctor` or `node <plugin>/runtime/cli.mjs doctor --project <root>`.
+3. Review version conflicts and resulting state. `resolve <event-id>` explicitly acknowledges a losing event in `resolutions.json`.
+4. Reapply the desired intent as a new command using the current version. Acknowledging a loser does not apply its content.
+5. Run `snapshot`; commit the events, resolutions and reconstructed SQLite together.
 
-Se apenas o snapshot binário está em conflito, ele pode ser substituído pelo snapshot reconstruído. Não apague `events/` nem `.nexo/local/` durante uma sessão ativa. Sem a outbox local, trabalho ainda não confirmado pode não ter sido exportado.
+If only the binary snapshot conflicts, replace it with the reconstructed snapshot. Do not delete `events/` or `.nexo/local/` during an active session. Without the local outbox, unacknowledged work may not have been exported.
 
-## Serviço e worktrees
+## Service and worktrees
 
-O processo liga apenas em `127.0.0.1` numa porta disponível. O registro contém PID, instância aleatória, diretório e token. O cliente verifica a identidade por healthcheck; a criação usa mutex de startup e processo detached com janela oculta no Windows. Cada Store mantém um segundo mutex de escritor por toda a vida, inclusive em um `serve` iniciado diretamente. Os mutexes usam locks de SQLite em arquivos permanentes ignorados pelo Git; a morte do processo libera o lock e nenhum timeout toma o lugar de um dono vivo. Não remova esses arquivos. Durante upgrades, o cliente faz shutdown autenticado do daemon daquele diretório, sem downgrade ou encerramento por PID. Ele permanece disponível após a sessão Claude para manter o board aberto.
+The service binds to `127.0.0.1` on an available port. The registry records its PID, random instance ID, directory and token. Clients check identity through health requests. Startup uses a mutex and a detached process with a hidden window on Windows. Each Store holds a separate lifetime writer mutex, including when `serve` is started directly. Mutexes use SQLite locks in persistent, Git-ignored files. Process death releases ownership; no timeout supersedes a live owner. Never remove these files. Upgrades use authenticated graceful shutdown for that directory, without downgrades or PID-based termination. The service stays available after a Claude session to keep the board open.
 
-Por padrão, cada checkout tem seu serviço e visão de branch. Isso evita misturar planos de branches diferentes. Para times de uma mesma entrega trabalharem em outros worktrees com **um único board coordenador**, configure `NEXO_PROJECT_ROOT=<checkout-coordenador>` e `NEXO_WORKSPACE=<worktree-do-time>` no processo Claude. O helper `run` faz isso. A raiz coordenadora recebe os eventos; o time escreve no worktree. A integração dos commits continua sendo uma etapa explícita.
+By default each checkout has its own service and branch view, keeping plans from different branches separate. For teams working in other worktrees on the same delivery through **one coordinator board**, set `NEXO_PROJECT_ROOT=<coordinator-checkout>` and `NEXO_WORKSPACE=<team-worktree>` in the Claude process. The `run` helper does this. The coordinator receives events; the team writes in its worktree. Commit integration remains explicit.
 
-Nunca use o diretório interno `~/.claude/teams` como banco do Nexo. Sessões e agentes Claude fornecem identidade/contexto; MCP e leases fornecem o estado de coordenação do board. Um stop encerra vínculo, mas não prova implementação concluída.
+Never use Claude's internal `~/.claude/teams` directory as Nexo storage. Claude sessions and agents supply identities/context; MCP and leases provide board coordination state. Stopping an agent ends its association but does not establish successful implementation.
 
-## Limites desta release
+## Release limits
 
-SQLite é single-writer, com consultas locais e busca FTS5. Os arquivos JSON e o replay completo priorizam auditabilidade e recuperação. O board busca um snapshot completo e pagina a renderização; não há virtualização completa nem servidor distribuído. Para dezenas de milhares de eventos, meça latência/replay e tamanho dos snapshots antes de adoção. Não foi definido um SLO validado em benchmark para grandes projetos.
+SQLite has one writer and local queries with FTS5 search. JSON history and complete replay favor auditability and recovery. The board fetches complete state and paginates list rendering; it has no complete virtualization or distributed service. Measure replay latency and snapshot size before adopting tens of thousands of events. No large-project SLO has been validated.
 
-Não há replicação multiusuário em rede, autenticação de equipe, busca vetorial, sincronização remota, migrador entre majors de schema, controle de orçamento de toda a conta Anthropic nem sandbox de filesystem. Versões de schema desconhecidas são recusadas em vez de migradas de forma destrutiva. Esses recursos devem ser desenvolvidos e validados conforme a necessidade concreta.
+There is no network replication, team authentication, vector search, remote synchronization, major-schema migration engine, account-wide Anthropic budget control or filesystem sandbox. Unknown schema versions are rejected instead of destructively migrated. These capabilities need separate implementation and validation for concrete requirements.

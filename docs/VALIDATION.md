@@ -1,52 +1,54 @@
-# Evidência de validação
+# Validation evidence
 
-## rc.3 — concorrência e publicação de snapshots (2026-11-03)
+These results describe specific tested environments. They are not performance guarantees for every machine or project size.
 
-Windows, Node 24.22.1, Claude Code 2.1.316: 29 testes Node e 2 cenários de navegador passaram. Os novos testes incluem lock de escritor entre processos, liberação após crash real, startup sem roubo por idade, recuperação de outbox, 40 chamadas de snapshot em duas gerações, falha persistente com deadline, restauração do binário alterado pelo Git, aviso não fatal com retomada automática, shutdown com erro e rejeição de uma mutação cujo corpo ainda estava chegando. Um handle real do Windows sem `FILE_SHARE_DELETE` reproduziu a falha de substituição, permitiu heartbeat e liberou a publicação ao ser fechado.
+## rc.3 — concurrency and snapshot publication (2026-11-03)
 
-Um ensaio local adicional usou o runtime **instalado** rc.2 e três clientes rc.3 simultâneos em um projeto isolado. A instância foi substituída uma única vez; entrega/card e token da lease original continuaram válidos. Um cliente rc.2 reutilizou o daemon rc.3. Nenhum processo de projeto existente foi encerrado. Tipos, formatação e validação oficial de plugin/marketplace passaram. Resultados multiplataforma do commit de publicação ficam registrados no CI.
+Windows, Node 24.22.1, Claude Code 2.1.316: 29 core tests and two browser scenarios passed. New coverage included interprocess writer ownership, release after a real crash, startup without stealing ownership by age, outbox recovery, 40 snapshot requests across two generations, persistent failure deadlines, recovery of a Git-modified binary, nonfatal warnings and automatic recovery, failed shutdown publication, and rejection of a mutation whose body was still arriving. An actual Windows handle without `FILE_SHARE_DELETE` reproduced replacement failure, allowed heartbeat, and released publication when closed.
 
-Execução local em 2026-11-02, Windows, Node 24.22.1 e Claude Code 2.1.316. Estes resultados descrevem o ambiente testado; não são uma garantia de desempenho para qualquer máquina ou volume.
+An additional local trial used the **installed** rc.2 runtime with three concurrent rc.3 clients in an isolated project. The instance was replaced once; delivery/card data and the original lease token remained valid. An rc.2 client reused the rc.3 daemon. No existing project process was stopped. Types, formatting and official plugin/marketplace validation passed. Multiplatform results are recorded in CI for the published revision.
 
-## Testes reais do Claude
+## Native Claude trials (2026-11-02)
 
-O script opt-in `scripts/acceptance.mjs` carregou o plugin com `--plugin-dir` em um repositório temporário autenticado:
+Environment: Windows, Node 24.22.1 and Claude Code 2.1.316. The opt-in `scripts/acceptance.mjs` loaded the plugin with `--plugin-dir` in an authenticated temporary repository:
 
-- Planner nativo criou entrega, workflow, time, cards e dependência via MCP.
-- Planner registrou sua própria claim; uma atualização desatualizada foi recusada e recuperada com nova leitura.
-- Agent nativo `nexo:worker` recebeu sua identidade pelo hook, assumiu o card e registrou resultado/evidência.
-- Ambos os cards terminaram concluídos; a entrega foi aceita e não restaram agentes ativos.
-- Subagente compartilhou sessionId do pai e usou agentId próprio, conforme o modelo nativo do Claude.
+- A native planner created a delivery, workflow, team, cards and dependency through MCP.
+- The planner registered its own claim; a stale update was rejected and recovered through a new state read.
+- Native `nexo:worker` received its hook identity, claimed its card and recorded results/evidence.
+- Both cards were completed, the delivery was accepted and no active agents remained.
+- The subagent shared its parent sessionId and had its own agentId, following the native Claude model.
 
-O script `scripts/acceptance-parallel.mjs` iniciou dois helpers `run` em worktrees Git diferentes, apontando ao mesmo coordenador:
+`scripts/acceptance-parallel.mjs` started two `run` helpers in distinct Git worktrees using one coordinator:
 
-- Dois agentes ativos simultâneos foram observados no mesmo projeto.
-- As sessões leram os dois times, concluíram seus próprios cards com as leases já adquiridas e liberaram os vínculos.
-- Ambos os processos encerraram com código zero e nenhum agente ativo remanescente.
+- Two active agents were observed simultaneously in the same project.
+- Sessions read both teams, completed their own cards with their pre-acquired leases and released their associations.
+- Both processes exited successfully with no remaining active agents.
 
-São ensaios do protocolo/lifecycle em fixtures, sem implementação de uma feature de produto e sem aprovação automática de shell. Não substituem um piloto completo de edição, integração e revisão em um projeto real.
+These are protocol/lifecycle trials in fixtures, without a product feature implementation or automatic shell approval. They do not replace a complete pilot with edits, integration and review in a real project.
 
-## Verificação automatizada
+## Automated verification
 
-Os testes Node cobrem controle de versão, idempotência, hierarquia/ciclos, claims simultâneas, sobreposição de escrita, expiração/fencing, evidências, histórico aceito, snapshot, replay, conflito de branches, isolamento de projetos, descoberta de projeto aninhado, HTTP e protocolo MCP oficial. Um teste separado de navegador verifica dados reais, SSE, temas, modais, fluxo, animação, movimento reduzido e viewports 1440/1024/768/390/320.
+Core tests cover versions, idempotency, hierarchy/cycles, concurrent claims, overlapping scopes, expiration/fencing, evidence, accepted history, snapshots, replay, branch conflicts, project isolation, nested discovery, HTTP and the official MCP protocol. Browser scenarios exercise real data, SSE, themes, modals, workflows, graphs, animations, reduced motion and viewports including 1440/1024/768/390/320.
 
-Validação oficial de plugin e marketplace passou em modo estrito; o perfil de diretório também passou. Auditoria de dependências de produção retornou zero vulnerabilidades conhecidas nessa execução.
+Official plugin and marketplace validation passed in strict mode, including the directory profile. Production dependency auditing reported no known vulnerabilities in that execution.
 
-## Medição local inicial
+## Initial local measurements
 
-Fixture: 1.000 cards em cadeia de dependências, 1.001 eventos, uma entrega, sem agentes executando; gravações duráveis individuais em SSD local.
+Fixture: 1,000 cards in a dependency chain, 1,001 events, one delivery and no executing agents. Durable writes were individual operations on a local SSD.
 
-| Operação                                          | Tempo observado |
-| ------------------------------------------------- | --------------: |
-| Criar 1.000 cards e eventos                       |          6,47 s |
-| Gerar snapshot SQLite fechado                     |          112 ms |
-| Consultar estado completo                         |         2,59 ms |
-| Buscar com FTS5                                   |         2,16 ms |
-| Reconstruir após remover somente a projeção local |          480 ms |
-| Snapshot resultante                               |         1,27 MB |
+| Operation                                        | Observed time |
+| ------------------------------------------------ | ------------: |
+| Create 1,000 cards and events                    |        6.47 s |
+| Generate a closed SQLite snapshot                |        112 ms |
+| Read complete state                              |       2.59 ms |
+| Search with FTS5                                 |       2.16 ms |
+| Rebuild after removing only the local projection |        480 ms |
+| Resulting snapshot size                          |       1.27 MB |
 
-O ledger usa cache de metadados, fronteira causal persistida e consultas indexadas para evitar releitura de todos os arquivos em cada comando. O replay e snapshots ainda percorrem o histórico completo. Um SLO para dezenas de milhares de cards e múltiplos usuários permanece fora desta evidência.
+The event ledger uses metadata caching, a persisted causal frontier and indexed queries to avoid rereading every file for each command. Replay and snapshot construction still traverse complete history. This is not an SLO for tens of thousands of cards or multiple users.
 
-## Distribuição
+## Distribution
 
-A instalação foi concluída a partir de `heamaral/nexo-claude` privado, em perfil Claude e projeto isolados no workspace, com scope project e configuração node_path explícita. O CLI confirmou o plugin habilitado na versão 1.0.0-rc.1. O CI do commit 0346bd4 passou nas verificações de Windows, Linux, macOS e navegador Chromium Linux: https://github.com/heamaral/nexo-claude/actions/runs/41541804042.
+Initial installation used the then-private `heamaral/nexo-claude` repository in an isolated Claude profile and workspace project, with project scope and an explicit node_path. The CLI confirmed enabled rc.1. CI for commit 0346bd4 passed Windows, Linux, macOS and Chromium Linux: [CI run](https://github.com/heamaral/nexo-claude/actions/runs/41541804042).
+
+The repository subsequently became public under MIT in rc.4. The English UI and regenerated example screenshots are introduced in rc.5; consult that revision's CI for current results.
