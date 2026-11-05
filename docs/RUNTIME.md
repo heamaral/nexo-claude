@@ -21,7 +21,7 @@ An uninitialized project's hooks exit without starting Node or creating a cache.
 | macOS            | Intel x64, Apple ARM64 | Official Node tar.gz |
 | Linux with glibc | x64, ARM64             | Official Node tar.gz |
 
-The host must meet the pinned official Node release's OS/libc requirements and permit executable files in the cache. Alpine/musl, 32-bit hosts and other architectures are outside the supported set. Ordinary macOS/Linux `/bin/sh`, `uname` and `dirname` select the native launcher. Docker, Go, npm and pnpm are not user dependencies. ARM64 binaries are supplied; see the validation report for architectures actually executed in CI.
+The host must meet the pinned official Node release's OS/libc requirements and permit executable files in the cache. Alpine/musl, 32-bit hosts and other architectures are outside the supported set. Ordinary macOS/Linux `/bin/sh`, `uname` and `dirname` select the native launcher. Docker, Go, npm and pnpm are not user dependencies. CI executes all six OS/architecture pairs, including native ARM64 runners; see the validation report for evidence and limits.
 
 ## Cache, concurrency and updates
 

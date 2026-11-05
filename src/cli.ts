@@ -21,7 +21,7 @@ async function main() {
     process.cwd();
   if (Number(process.versions.node.split('.')[0]) !== 24)
     throw new Error(
-      'Nexo requires Node.js 24.22.x (LTS). Install this runtime and check the Claude PATH.',
+      'Start Nexo through the bundled bootstrap/nexo launcher (nexo.exe on Windows); it automatically manages the required private Node runtime.',
     );
   if (action === 'serve') {
     const running = await startServer(findProject(cwd));
