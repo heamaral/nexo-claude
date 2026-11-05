@@ -20949,7 +20949,7 @@ function assertAcyclic(start, next, message) {
 }
 
 // src/version.ts
-var VERSION = "1.0.0-rc.3";
+var VERSION = "1.0.0-rc.4";
 
 // src/registry.ts
 import fs6 from "node:fs";

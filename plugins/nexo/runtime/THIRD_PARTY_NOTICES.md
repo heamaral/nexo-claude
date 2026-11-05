@@ -1,6 +1,6 @@
 # Third-party notices
 
-This file is generated from the packages included in the bundled runtime. Their original licenses apply independently of the proprietary Nexo source.
+This file is generated from the packages included in the bundled runtime. Their original licenses apply independently of the MIT-licensed Nexo source.
 
 ## @modelcontextprotocol/sdk@1.32.2
 

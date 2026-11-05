@@ -1,98 +1,132 @@
 # Nexo
 
-**Do plano à entrega, com contexto.** Kanban local e coordenação de agentes para Claude Code, com histórico pertencente ao projeto.
+**See how parallel agent work connects to the delivery.**
 
-![Times da entrega no tema escuro](docs/board-dark.png)
+Nexo is a local Claude Code plugin with a live browser board for deliveries, hierarchical tasks, dependencies, teams and active agents. Plans and history belong to your project. Agent ownership is coordinated through expiring leases in SQLite.
 
-## Estado da versão
+[Install](#get-started) · [How it works](#from-a-delivery-to-the-agents-working-on-it) · [Concurrency and recovery](docs/CONCURRENCY.md) · [Validation](docs/VALIDATION.md) · [MIT license](LICENSE)
 
-`1.0.0-rc.3` é uma release candidate funcional, com testes automatizados de persistência, concorrência, segurança HTTP, MCP e navegador. A publicação de snapshots agora tem fila, retries limitados e isolamento das reservas dos agentes. O lifecycle nativo com planner/worker e duas sessões em worktrees foi validado. A promoção estável depende do CI nas plataformas suportadas e de um piloto completo de implementação e integração. Não há alegação de suporte ilimitado de escala ou de isolamento de sistema operacional por leases.
+![Example delivery dependency graph in dark mode](docs/graph-dark.png)
 
-## Instalação
+_Screenshots use example project data. The interface currently uses Portuguese; agent instructions and project scaffolding use English, and agents respond in your language._
 
-Requisitos: **Node.js 24.22.x LTS** disponível no PATH do Claude, **Claude Code >= 2.1.316**, Git e acesso ao repositório privado. O plugin não precisa de pnpm nem baixa dependências em seu primeiro uso.
+## From a delivery to the agents working on it
 
-No Claude Code:
+Running several agents creates a coordination problem: what are they building together, who owns each task, and what must finish before the next task can start?
+
+Nexo makes those relationships explicit:
+
+```text
+Project
+└── Delivery: password recovery
+    ├── Task: recovery API
+    │   ├── Subtask: single-use tokens
+    │   └── Subtask: recovery email
+    ├── Task: reset form
+    └── Task: integrate and validate
+        depends on the API and reset form
+
+Teams and agents are attached to the delivery's tasks.
+```
+
+**Hierarchy describes what belongs together. Dependencies describe what must happen first.** They are stored separately and have separate graph views. A parent card summarizes its subtasks; the dependency view shows branching and joining execution paths without repeating each prerequisite card.
+
+Each delivery has its own board, teams and graph. Completing one delivery preserves its result; a later request can create another delivery linked to the previous one.
+
+## What you can see and coordinate
+
+| Capability                                           | What it helps you understand                                                       |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Hierarchical cards and leaf-based progress           | How individual tasks contribute to a larger result without double-counting parents |
+| Dependency graph and explicit blockers               | Which work can proceed and which work is waiting                                   |
+| Teams, active agents and current activities          | Who is working on each card and where work is happening in parallel                |
+| Configurable columns and validation stages           | How the workflow fits this delivery rather than a fixed universal template         |
+| Task, delivery and workflow modals                   | Criteria, evidence, results and relationships without leaving the board            |
+| Live updates, dark/light themes, zoom and fullscreen | A navigable view of the project as work changes                                    |
+
+The intended benefit is less manual reconstruction of status from separate conversations. **There is no measured claim of token savings, faster delivery or improved model accuracy.** The validation report separates local measurements from untested scale assumptions.
+
+![Example delivery teams in dark mode](docs/board-dark.png)
+
+## Get started
+
+Requirements: **Node.js 24.22.x**, **Claude Code 2.1.316 or later**, and Git. The runtime and browser assets are bundled; using the plugin does not require pnpm or a separate web deployment.
+
+In Claude Code:
 
 ```text
 /plugin marketplace add heamaral/nexo-claude
 /plugin install nexo@nexo-marketplace
 ```
 
-No diretório do projeto:
+Configure the plugin's `node_path` with your Node 24 executable if it is not the default on Claude's PATH. Then, from a project directory:
 
 ```text
 /nexo:init
-/nexo:plan Implementar recuperação de senha com testes e revisão
+/nexo:plan Implement password recovery with tests and review
 /board
 ```
 
-Se o Node 24 não for o padrão do sistema, configure o executável na instalação: `claude plugin install nexo --marketplace heamaral/nexo-claude --config node_path=/caminho/para/node`. Caminhos com espaços devem ser passados entre aspas. Isso configura apenas o plugin.
+`/nexo:board` always provides the namespaced command. Initialization creates `/board` as a project alias without overwriting an existing command. This is a **Claude Code plugin**, not a general Claude Desktop chat extension.
 
-O comando do plugin é `/nexo:board`. A inicialização também cria o alias de projeto `/board` em `.claude/commands/board.md`, sem sobrescrever um comando existente. Comandos ficam no menu de slash commands; o plugin não modifica o menu nativo do aplicativo Claude Desktop. Este pacote é para **Claude Code**, inclusive o ambiente Code dentro do Desktop quando ele oferece plugins, e não uma extensão `.mcpb` de chat comum.
-
-Para teste local sem instalar o marketplace:
+For a local checkout:
 
 ```sh
-claude --plugin-dir /caminho/nexo-claude/plugins/nexo
+claude --plugin-dir ./plugins/nexo
 ```
 
-## O que pertence a cada projeto
+To update an existing user-scoped installation:
+
+```sh
+claude plugin marketplace update nexo-marketplace
+claude plugin update nexo@nexo-marketplace --scope user
+```
+
+Use the installation's actual scope if it is `project` or `local`. Run `/reload-plugins` in the relevant Claude sessions and reopen `/board`.
+
+## Coordination backed by state
+
+The planner organizes deliveries, task hierarchy, dependencies and teams. Workers and reviewers claim tasks with explicit identities and scopes, renew their leases during work, and release them when finished. Nexo records ownership; an agent response alone does not establish completion.
+
+- One active executor per task, with explicit collaborators and reviewers.
+- Expiring leases, fencing and overlapping write-scope checks.
+- Expected entity versions and idempotent command IDs to reject accidental overwrites.
+- Cycle, dependency, blocker, evidence and accepted-delivery checks.
+- One writer per directory, with crash-released ownership locks.
+- A separate snapshot publisher with bounded asynchronous retries; a sharing violation does not stop agent heartbeats.
+
+These are application-level checks. **They do not sandbox shell commands or prove that an implementation is correct.** A recorded commit is evidence to review, not proof that a feature works. See [security boundaries](SECURITY.md).
+
+Use separate worktrees for parallel teams writing code. To coordinate several worktrees through one board, set `NEXO_PROJECT_ROOT` to the coordinator checkout and `NEXO_WORKSPACE` to the team's worktree. The CLI `run` helper acquires a lease before launching an independent Claude session; see [architecture and operation](docs/ARCHITECTURE.md).
+
+Nexo teams are logical coordination groups. They do not enable experimental Claude Agent Teams or change the Claude client's own concurrency limits.
+
+## Project-owned data
 
 ```text
-meu-projeto/
+your-project/
 ├── .claude/
 │   ├── commands/board.md
 │   └── rules/nexo.md
 └── .nexo/
-    ├── project.json          # identidade, versão e limites do projeto
-    ├── project.sqlite        # snapshot fechado, commitável, sem runtime
-    ├── events/<uuid>.json    # histórico imutável e reconstruível
-    ├── resolutions.json      # reconhecimentos explícitos de conflitos, se houver
-    ├── .gitignore
-    ├── .gitattributes
-    └── local/                # ignorado: WAL, leases, tokens, porta, logs
+    ├── project.json       # Project identity and capacity settings
+    ├── project.sqlite     # Closed, tracked snapshot without runtime credentials
+    ├── events/            # Immutable JSON events for history and reconstruction
+    ├── resolutions.json   # Explicit conflict acknowledgments, when needed
+    └── local/             # Git-ignored live SQLite, leases, tokens and logs
 ```
 
-Commit os arquivos duráveis e as regras do projeto. Execute a ferramenta `snapshot` antes do commit para garantir um SQLite atualizado. Os eventos são gravados antes da confirmação do comando e o snapshot é atualizado automaticamente com debounce. O serviço recupera uma transação local ainda não exportada após reinício. O Git não faz merge semântico de SQLite: use os eventos para reconstruir depois de conflitos.
+Run `snapshot` before committing durable Nexo data. SQLite binaries cannot be semantically merged by Git; event history supports reconstruction and explicit conflict handling. Never commit `.nexo/local/` or put secrets in cards and evidence.
 
-SQLite é adequado para consultas relacionais, hierarquia e transações locais. A busca usa FTS5; embeddings não são necessários para dependências, estados ou coordenação. O adaptador usa `node:sqlite` da linha Node 24, cuja API ainda é release candidate; o major suportado fica fixo até validação de migração.
+The board service binds to `127.0.0.1`. The browser is an authenticated, read-only view; updates flow through MCP. Nexo does not require a hosted Nexo service. Claude itself remains subject to the services and settings you use.
 
-## Experiência do board
+## Release status and validation
 
-- Portfólio de entregas, com resultado e fluxo preservados após aceitação.
-- Dentro de cada entrega: **Board, Times e Caminho**. Caminho agora é um grafo interativo com ramificações, junções, zoom, pan e modos de dependências/hierarquia; cada card aparece uma única vez.
-- Colunas e gates configuráveis no workflow da entrega pelo Claude.
-- Cards com critérios, dependências, bloqueio vermelho, subtarefas, evidências e resultado em modal.
-- Progresso conta folhas, sem somar pais e filhos duas vezes.
-- Times e cards com agentes ativos têm borda tracejada animada; respeita movimento reduzido.
-- Temas claro/escuro, busca, navegação por teclado, modais nativos e layout responsivo.
-- SSE para atualização imediata; watcher e reconciliação periódica importam alterações externas/Git. Ao reconectar, o board busca o estado atual completo, evitando depender de eventos de rede perdidos.
+**Release candidate, not a stable production guarantee.** The core suite covers ownership, leases, recovery, event conflicts, snapshots and HTTP/MCP behavior on Windows, Linux and macOS. Browser scenarios cover live updates, graphs, themes, modals and responsive layouts. A Windows test reproduces a real file-sharing violation during snapshot replacement.
 
-![Tema claro](docs/board-light.png)
+See [validation evidence](docs/VALIDATION.md) and [remaining stable-release criteria](docs/RELEASE.md). A full implementation pilot, clean-machine recovery and large-project SLO validation remain outstanding. Snapshot construction and event replay still perform synchronous local SQLite work. There is no distributed scheduler or network multiuser service.
 
-## Planejamento e paralelismo
-
-O agente `nexo:planner` organiza entregas, times, cards e dependências; `nexo:worker` e `nexo:reviewer` executam trabalho com escopo explícito. Os hooks injetam identidades, exigem claim antes de ferramentas de escrita/shell, renovam leases durante ferramentas e liberam o vínculo no final da resposta. Card concluído exige resultado e evidência; gates exigem um SHA de commit. O sistema valida o formato e os pré-requisitos, mas a revisão humana/IA é responsável por verificar que a evidência corresponde ao resultado real.
-
-Cada card tem um executor e pode ter colaboradores/revisores explícitos. Escritores com caminhos sobrepostos são serializados. Todos os agentes registrados contam para a capacidade do projeto e dos times. Limites padrão de Nexo são política configurável do produto, não limites do Claude. Não há scheduler global de conta Anthropic entre máquinas/projetos.
-
-Use worktrees para times independentes. Para uma sessão de terminal independente apontar ao board coordenador, use `NEXO_PROJECT_ROOT` com caminho absoluto; `NEXO_WORKSPACE` indica seu worktree. O helper abaixo registra a sessão antes de iniciá-la, fixa um orçamento e libera o vínculo ao sair:
-
-```sh
-node /caminho/plugins/nexo/runtime/cli.mjs run \
-  --project /repo-principal --workspace /worktrees/backend \
-  --task api --team backend --scope src/api,tests/api \
-  --prompt-file /caminho/tarefa.txt --max-budget-usd 10
-```
-
-Ele usa `claude -p`, permissões normais e o plugin explícito; não contorna restrições de sessões aninhadas nem habilita Agent Teams experimentalmente. Execute em terminal autorizado com Claude autenticado. Native Agent Teams continua limitado a um time nativo por sessão. Subagentes comuns compartilham workspace por padrão; equipes lógicas Nexo não alteram isso.
-
-Leases expiram: “sem contato” não significa sucesso. Uma execução antiga não pode concluir o card depois de ser substituída. Longas ferramentas sem heartbeat podem exigir nova claim e revalidação. Interrupções não são convertidas automaticamente em conclusão.
-
-## Operação e desenvolvimento
-
-Leia [concorrência e snapshots](docs/CONCURRENCY.md), [arquitetura e recuperação](docs/ARCHITECTURE.md), [modelo e API](docs/API.md), [segurança](SECURITY.md) e [gates de lançamento](docs/RELEASE.md).
+## Development
 
 ```sh
 corepack pnpm install --frozen-lockfile
@@ -101,10 +135,8 @@ pnpm test:browser
 pnpm validate:plugin
 ```
 
-O código-fonte está em `src/`; o runtime empacotado em `plugins/nexo/runtime/` é versionado para instalação direta pelo marketplace. CI verifica tipos, build reproduzível, testes, auditoria e validação oficial. Dependências estão fixadas no lockfile; scripts de instalação são permitidos apenas para esbuild e o CLI oficial usado na validação.
+Source lives in `src/`; the bundled marketplace runtime lives in `plugins/nexo/runtime/`. [API](docs/API.md), [language policy](docs/LANGUAGE.md), and [concurrency and recovery](docs/CONCURRENCY.md) describe the current implementation. Some detailed documentation is currently in Portuguese.
 
-Projeto privado e proprietário, sem publicação no npm nem hospedagem em nuvem. Licenças de terceiros ficam preservadas em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+## License
 
-## Language policy
-
-Agent instructions and newly scaffolded project rules use English; agents respond in the user's language and preserve project content. The UI is currently Portuguese. See [the language policy and MCP naming explanation](docs/LANGUAGE.md).
+Nexo is licensed under [MIT](LICENSE). Bundled dependencies retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
