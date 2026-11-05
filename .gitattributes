@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.sqlite binary
 plugins/nexo/runtime/** -diff
+plugins/nexo/bootstrap/*.exe binary
+plugins/nexo/bootstrap/nexo-* -text -diff

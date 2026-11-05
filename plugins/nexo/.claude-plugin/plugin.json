@@ -1,20 +1,11 @@
 {
   "name": "nexo",
   "displayName": "Nexo",
-  "version": "1.0.0-rc.5",
+  "version": "1.0.0-rc.6",
   "description": "Local delivery planning, hierarchical tasks, agents and a live board for every Claude Code project.",
   "author": {
     "name": "Henrique Barcellos"
   },
   "homepage": "https://github.com/heamaral/nexo-claude",
-  "repository": "https://github.com/heamaral/nexo-claude",
-  "userConfig": {
-    "node_path": {
-      "type": "string",
-      "title": "Node.js 24.22 LTS",
-      "description": "Executable name on PATH or absolute path to Node.js 24.22.x. Passed as an argv executable, without a shell.",
-      "default": "node",
-      "required": true
-    }
-  }
+  "repository": "https://github.com/heamaral/nexo-claude"
 }

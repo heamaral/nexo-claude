@@ -2,6 +2,14 @@
 
 These results describe specific tested environments. They are not performance guarantees for every machine or project size.
 
+## rc.6 — managed runtime (2026-11-05)
+
+A real Windows Claude Code 2.1.316 launch used an isolated profile and project with Node removed from PATH. Claude discovered and connected to the plugin's native MCP entry point, expanded the persistent plugin-data path and did not request node_path configuration.
+
+The opt-in `pnpm test:runtime` trial used a fresh private cache and the production manifest. It downloaded and verified Node 24.22.2, created project records and a lease, disconnected MCP, reconnected with deliberately unusable HTTP/HTTPS proxies, and renewed the original lease before releasing it. Cold MCP initialization took 98 ms in the first local trial, while runtime setup continued in the background. This measures connection responsiveness, not download completion or a universal latency guarantee.
+
+Native tests exercise ZIP/tar extraction, archive/executable tampering, capability failures, interrupted downloads, bounded retries, shared failure cooldown, rate limiting, offline reuse, immutable upgrades, four concurrent installer processes, live-lock preservation, crash recovery and MCP discovery/queuing. Two additional application tests launch without Node on PATH, reuse an offline fixture, strip ambient Node options and skip runtime installation for hooks outside Nexo projects. Multiplatform CI and a non-root Linux container with no Node installation are required for this revision; consult the published commit's CI for the results and exact host architectures. ARM64 distribution artifacts are cross-compiled; availability alone is not a physical ARM64-machine validation.
+
 ## rc.3 — concurrency and snapshot publication (2026-11-03)
 
 Windows, Node 24.22.1, Claude Code 2.1.316: 29 core tests and two browser scenarios passed. New coverage included interprocess writer ownership, release after a real crash, startup without stealing ownership by age, outbox recovery, 40 snapshot requests across two generations, persistent failure deadlines, recovery of a Git-modified binary, nonfatal warnings and automatic recovery, failed shutdown publication, and rejection of a mutation whose body was still arriving. An actual Windows handle without `FILE_SHARE_DELETE` reproduced replacement failure, allowed heartbeat, and released publication when closed.
