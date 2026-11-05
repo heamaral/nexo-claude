@@ -7,5 +7,12 @@
     "name": "Henrique Barcellos"
   },
   "homepage": "https://github.com/heamaral/nexo-claude",
-  "repository": "https://github.com/heamaral/nexo-claude"
+  "repository": "https://github.com/heamaral/nexo-claude",
+  "license": "MIT",
+  "keywords": ["planning", "kanban", "agents", "dependencies", "local-first"],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/heamaral/nexo-claude#readme",
+  "supportUrl": "https://github.com/heamaral/nexo-claude/issues",
+  "privacyPolicyUrl": "https://github.com/heamaral/nexo-claude/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/heamaral/nexo-claude/blob/main/LICENSE"
 }
