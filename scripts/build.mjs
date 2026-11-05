@@ -63,7 +63,7 @@ for (const input of [
   }
 }
 let notices =
-  '# Third-party notices\n\nThis file is generated from the packages included in the bundled runtime. Their original licenses apply independently of the proprietary Nexo source.\n';
+  '# Third-party notices\n\nThis file is generated from the packages included in the bundled runtime. Their original licenses apply independently of the MIT-licensed Nexo source.\n';
 for (const [name, { dir, pkg }] of [...packages].sort(([a], [b]) => a.localeCompare(b))) {
   notices += '\n## ' + name + '\n\nLicense: ' + String(pkg.license ?? 'See package notices') + '\n';
   for (const file of fs

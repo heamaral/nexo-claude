@@ -1,13 +1,17 @@
 {
   "name": "nexo-marketplace",
-  "metadata": { "description": "Plugins Nexo para planejamento e coordenação local de projetos" },
-  "owner": { "name": "Henrique Barcellos" },
+  "metadata": {
+    "description": "Nexo plugins for local delivery planning and agent coordination"
+  },
+  "owner": {
+    "name": "Henrique Barcellos"
+  },
   "plugins": [
     {
       "name": "nexo",
       "source": "./plugins/nexo",
-      "description": "Kanban local, planejamento hierárquico e coordenação de agentes por projeto",
-      "version": "1.0.0-rc.3"
+      "description": "Project-local task hierarchy, dependency graphs and agent coordination for Claude Code",
+      "version": "1.0.0-rc.4"
     }
   ]
 }

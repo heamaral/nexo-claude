@@ -1,5 +1,9 @@
 # Gates de lançamento
 
+## 1.0.0-rc.4 — public launch preparation
+
+Nexo is now licensed under MIT, including the bundled plugin license. The main README and plugin introduction explain installation, task hierarchy versus execution dependencies, agent ownership, local data, validation evidence and limitations in English. Third-party license notices remain preserved. The browser interface remains Portuguese. This release does not change the coordination protocol or promote the project to stable; no speedup or token-saving benchmark is claimed.
+
 ## 1.0.0-rc.3
 
 Correção da publicação de snapshots sob concorrência: escritor único com mutex do sistema operacional via SQLite; startup sem roubar locks vivos por idade; fila que reúne pedidos simultâneos e acompanha gerações duráveis; heartbeat/release não reconstroem o SQLite exportável; retry assíncrono e limitado para EPERM/EACCES/EBUSY, seguido de retomada automática com backoff. Falhas de exportação deixam o último snapshot íntegro e não bloqueiam agentes. Encerramento drena HTTP, preserva banco/outbox mesmo se a publicação falhar e libera o dono do diretório. Eventos pendentes são exportados antes da reconciliação Git. Consulte [concorrência e operação](CONCURRENCY.md).

@@ -1,6 +1,6 @@
 {
   "name": "nexo-claude",
-  "version": "1.0.0-rc.3",
+  "version": "1.0.0-rc.4",
   "private": true,
   "type": "module",
   "description": "Project-local delivery planning, agent coordination and live kanban for Claude Code",
@@ -36,5 +36,6 @@
     "esbuild": "0.28.2",
     "prettier": "3.9.10",
     "typescript": "7.0.2"
-  }
+  },
+  "license": "MIT"
 }
