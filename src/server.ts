@@ -43,12 +43,62 @@ export async function startServer(
     error: string | undefined,
     shuttingDown = false;
   let closing: Promise<void> | undefined;
+  const measurements = new WeakMap<http.ServerResponse, { start: number; route: string }>();
+  const metricRoutes = new Set(
+    [
+      'health',
+      'bootstrap',
+      'state',
+      'changes',
+      'diagnostics',
+      'executions',
+      'search',
+      'events',
+      'shutdown',
+      'ticket',
+      'command',
+      'query',
+      'batch',
+      'schedule',
+      'workspace',
+      'reconcile',
+      'usage',
+      'telemetry-clear',
+      'run-check',
+      'executions-export',
+      'claim',
+      'heartbeat',
+      'release',
+      'session-end',
+      'hook',
+      'snapshot',
+      'resolve',
+    ].map((v) => '/api/' + v),
+  );
+  let telemetry = false;
+  try {
+    telemetry = store.coordination.config().telemetry;
+  } catch {
+    /* Report invalid optional configuration through diagnostics. */
+  }
   const send = (res: http.ServerResponse, status: number, body: unknown) => {
+    const output = JSON.stringify(body),
+      measure = measurements.get(res);
+    if (telemetry && measure)
+      try {
+        store.coordination.observe(
+          `${measure.route}:${status}`,
+          Buffer.byteLength(output),
+          performance.now() - measure.start,
+        );
+      } catch {
+        telemetry = false; /* Optional measurements never deny coordination. */
+      }
     if (shuttingDown) res.setHeader('Connection', 'close');
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify(body));
+    res.end(output);
   };
-  const broadcast = () => {
+  const broadcast = (durable = true) => {
     for (const res of clients) {
       if (res.destroyed || res.writableEnded) {
         clients.delete(res);
@@ -59,7 +109,7 @@ export async function startServer(
         clients.delete(res);
       } else
         res.write(
-          `id: ${instance}:${store.revision}\nevent: change\ndata: ${JSON.stringify({ revision: store.revision, error, snapshot: store.snapshots.state() })}\n\n`,
+          `id: ${instance}:${store.revision}\nevent: ${durable ? 'change' : 'presence'}\ndata: ${JSON.stringify({ revision: store.revision, durableRevision: store.durableRevision, instance, ...(durable ? {} : { agents: store.agents().map(({ token: _, ...a }) => a), project: store.config }), error, snapshot: store.snapshots.state() })}\n\n`,
         );
     }
   };
@@ -90,6 +140,10 @@ export async function startServer(
     );
     try {
       const url = new URL(req.url ?? '/', origin);
+      measurements.set(res, {
+        start: performance.now(),
+        route: metricRoutes.has(url.pathname) ? url.pathname : 'other',
+      });
       assert(req.headers.host === new URL(origin).host, 'HOST_DENIED', 'Invalid Host', 403);
       assert(
         !req.headers.origin || req.headers.origin === origin,
@@ -139,11 +193,41 @@ export async function startServer(
         if (req.method === 'GET' && url.pathname === '/api/state')
           return send(res, 200, {
             ...store.state(),
+            durableRevision: store.durableRevision,
             instance,
             runtimeVersion: VERSION,
             healthError: error ?? null,
             snapshot: store.snapshots.state(),
           });
+        if (req.method === 'GET' && url.pathname === '/api/changes') {
+          const result = store.coordination.query({
+            view: 'changes',
+            sinceRevision: Number(url.searchParams.get('since') ?? 0),
+          }) as any;
+          return send(res, 200, {
+            ...result,
+            resetRequired: result.resetRequired || url.searchParams.get('instance') !== instance,
+            instance,
+            eventCount: store.state().eventCount,
+            project: store.config,
+            conflicts: store.conflicts(),
+            snapshot: store.snapshots.state(),
+            healthError: error ?? null,
+          });
+        }
+        if (req.method === 'GET' && url.pathname === '/api/diagnostics') {
+          await store.coordination.refreshChecks();
+          return send(res, 200, { ...store.coordination.diagnostics(), runtimeVersion: VERSION });
+        }
+        if (req.method === 'GET' && url.pathname === '/api/executions')
+          return send(
+            res,
+            200,
+            store.coordination.query({
+              view: 'executions',
+              id: url.searchParams.get('taskId') ?? undefined,
+            }),
+          );
         if (req.method === 'GET' && url.pathname === '/api/search')
           return send(res, 200, store.search(url.searchParams.get('q') ?? ''));
         if (req.method === 'GET' && url.pathname === '/api/events') {
@@ -191,11 +275,79 @@ export async function startServer(
           tickets.set(ticket, Date.now() + 60_000);
           return send(res, 200, { url: origin + '/#ticket=' + ticket });
         }
-        if (url.pathname === '/api/command') return send(res, 200, store.execute(body));
+        if (url.pathname === '/api/command') {
+          await store.coordination.prepareCommands([body]);
+          assert(!shuttingDown, 'SERVER_DRAINING', 'Coordinator is draining', 503);
+          return send(res, 200, store.execute(body));
+        }
+        if (url.pathname === '/api/query') {
+          if (body.view === 'changes' && body.instance !== instance)
+            return send(res, 200, {
+              apiVersion: 2,
+              instance,
+              durableRevision: store.durableRevision,
+              resetRequired: true,
+              entities: [],
+            });
+          if (['task', 'diagnostics'].includes(body.view))
+            await store.coordination.refreshChecks(body.view === 'task' ? body.id : undefined);
+          return send(res, 200, { ...store.coordination.query(body), instance });
+        }
+        if (url.pathname === '/api/batch') {
+          assert(
+            Array.isArray(body.commands) && body.commands.length <= 100,
+            'BATCH_LIMIT',
+            'Use at most 100 commands',
+            400,
+          );
+          await store.coordination.prepareCommands(body.commands);
+          assert(!shuttingDown, 'SERVER_DRAINING', 'Coordinator is draining', 503);
+          return send(res, 200, store.coordination.batch(body));
+        }
+        if (url.pathname === '/api/schedule') {
+          assert(
+            body.deliveryId === undefined || typeof body.deliveryId === 'string',
+            'INVALID_DELIVERY',
+            'deliveryId must be a string',
+            400,
+          );
+          const result = store.coordination.schedule(body.deliveryId);
+          return send(
+            res,
+            200,
+            store.coordination.page(
+              result.tasks,
+              (await import('./coordination.js')).querySchema.parse(body.query ?? {}),
+              { advisory: result.advisory, dispatch: result.dispatch, capacity: result.capacity },
+              true,
+            ),
+          );
+        }
+        if (url.pathname === '/api/workspace')
+          return send(res, 200, await store.coordination.registerWorkspace(body));
+        if (url.pathname === '/api/reconcile') {
+          assert(typeof body.adapterId === 'string', 'ADAPTER_REQUIRED', 'adapterId required', 400);
+          return send(res, 200, store.coordination.reconcile(body.adapterId));
+        }
+        if (url.pathname === '/api/usage') return send(res, 200, store.coordination.usage(body));
+        if (url.pathname === '/api/telemetry-clear')
+          return send(res, 200, store.coordination.clearTelemetry());
+        if (url.pathname === '/api/run-check')
+          return send(res, 200, await store.coordination.runCheck(body));
+        if (url.pathname === '/api/executions-export')
+          return send(res, 200, store.coordination.exportExecutions());
         if (url.pathname === '/api/claim') return send(res, 200, store.claim(body));
         if (url.pathname === '/api/heartbeat') {
           assert(typeof body.token === 'string', 'INVALID_TOKEN', 'Token required', 400);
-          return send(res, 200, store.heartbeat(body.token, body.activity));
+          const a = store.heartbeat(body.token, body.activity);
+          return send(res, 200, {
+            agentId: a.agentId,
+            executionId: a.executionId,
+            taskId: a.taskId,
+            fence: a.fence,
+            expiresAt: a.expiresAt,
+            state: a.state,
+          });
         }
         if (url.pathname === '/api/release') {
           assert(typeof body.token === 'string', 'INVALID_TOKEN', 'Token required', 400);
@@ -216,7 +368,12 @@ export async function startServer(
           const actors = store
             .agents()
             .filter((a) => a.agentId === body.agentId && a.sessionId === body.sessionId);
-          if (['SubagentStop', 'Stop', 'StopFailure'].includes(body.event)) {
+          if (['Stop', 'SubagentStop'].includes(body.event)) {
+            // Other hooks can veto Stop. Explicit release or final SessionEnd
+            // ends ownership; otherwise the bounded lease expires naturally.
+            return send(res, 200, { ok: true, releaseDeferred: true });
+          }
+          if (body.event === 'StopFailure') {
             for (const a of actors) store.release(a.token);
             return send(res, 200, { ok: true });
           }
@@ -224,32 +381,57 @@ export async function startServer(
             store.releaseSession(body.sessionId);
             return send(res, 200, { ok: true });
           }
-          if (['PreToolUse', 'PostToolUse'].includes(body.event)) {
+          if (['PreToolUse', 'PostToolUse', 'PostToolUseFailure'].includes(body.event)) {
+            if (
+              body.event !== 'PreToolUse' &&
+              body.toolUseId &&
+              store.coordination.deduplicateHook(
+                `${body.sessionId}:${body.agentId}:${body.event}:${body.toolUseId}`,
+              )
+            )
+              return send(res, 200, { ok: true, duplicate: true });
             const a = actors.find((a) => a.state === 'working');
-            if (['Write', 'Edit', 'MultiEdit', 'Bash', 'PowerShell'].includes(body.toolName))
+            if (
+              body.event === 'PreToolUse' &&
+              ['Write', 'Edit', 'MultiEdit', 'Bash', 'PowerShell'].includes(body.toolName)
+            )
               assert(
                 a,
                 'CLAIM_REQUIRED',
                 'Before using write or shell tools, register this agent on a card with claim. agentId=' +
                   body.agentId,
               );
-            if (a && ['Write', 'Edit', 'MultiEdit'].includes(body.toolName)) {
+            if (
+              a &&
+              body.event === 'PreToolUse' &&
+              ['Write', 'Edit', 'MultiEdit'].includes(body.toolName)
+            ) {
               assert(a.role !== 'reviewer', 'READ_ONLY_CLAIM', 'Reviewers have no write scope');
               assert(typeof body.filePath === 'string', 'PATH_REQUIRED', 'File path required', 400);
               const workspace =
                 typeof body.workspace === 'string' ? fs.realpathSync.native(body.workspace) : root;
+              const registered = a.workspaceId
+                ? store.coordination.workspace(a.workspaceId)?.path
+                : root;
+              assert(
+                workspace === registered,
+                'WORKSPACE_MISMATCH',
+                'Register the effective worktree and include workspaceId in the claim',
+              );
               const absolute = path.resolve(workspace, body.filePath),
                 relative = path.relative(workspace, absolute).replaceAll('\\', '/');
               assert(
-                relative && !relative.startsWith('../') && !path.isAbsolute(relative),
+                (relative && !relative.startsWith('../') && !path.isAbsolute(relative)) ||
+                  store.coordination.allowedExternal(a, absolute),
                 'SCOPE_DENIED',
                 'File is outside the workspace',
               );
               assert(
-                a.scopes.some(
-                  (scope) =>
-                    scope === '.' || relative === scope || relative.startsWith(scope + '/'),
-                ),
+                store.coordination.allowedExternal(a, absolute) ||
+                  a.scopes.some(
+                    (scope) =>
+                      scope === '.' || relative === scope || relative.startsWith(scope + '/'),
+                  ),
                 'SCOPE_DENIED',
                 'File is outside the registered scope',
               );
@@ -313,6 +495,7 @@ export async function startServer(
       send(res, err.status ?? (err.name === 'ZodError' ? 400 : 500), {
         error: err.code ?? 'INVALID_REQUEST',
         message: err instanceof Error ? err.message : 'Internal error',
+        details: err.details,
       });
     }
   });
@@ -346,6 +529,11 @@ export async function startServer(
   const synchronize = () => {
     try {
       const config = loadConfig(root);
+      try {
+        telemetry = store.coordination.config().telemetry;
+      } catch {
+        telemetry = false;
+      }
       assert(
         config.id === store.config.id,
         'PROJECT_CHANGED',
@@ -386,7 +574,7 @@ export async function startServer(
   const periodic = setInterval(() => {
     synchronize();
     store.snapshots.verify();
-    broadcast();
+    broadcast(false);
     for (const [k, expiry] of tickets) if (expiry < Date.now()) tickets.delete(k);
     for (const [k, expiry] of sessions) if (expiry < Date.now()) sessions.delete(k);
   }, 3000);

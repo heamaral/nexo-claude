@@ -119,7 +119,10 @@ try {
   await call('heartbeat', { token: lease.token, activity: 'Verified after offline MCP restart' });
   await call('release', { token: lease.token });
   lease = undefined;
-  const state = await call('state');
+  const overview = await call('state');
+  assert.equal(overview.apiVersion, 2);
+  assert.ok(overview.counts.active >= 1);
+  const state = await call('state', { full: true });
   assert.ok(state.entities.some((e) => e.id === 'task'));
   await call('snapshot');
   // Exercise the actual native Claude launcher with the same restricted PATH.

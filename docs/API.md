@@ -1,6 +1,8 @@
 # Data model and MCP API
 
-Domain IDs accept up to 80 alphanumeric characters, `_` and `-`. Entity IDs are unique across all kinds within a project. Use a unique `commandId` per intent and reuse it only when retrying exactly the same request. `expectedVersion: 0` creates an entity; updates use the version read from `state`.
+Domain IDs accept up to 80 alphanumeric characters, `_` and `-`. Entity IDs are unique across all kinds within a project. Use a unique `commandId` per intent and reuse it only when retrying exactly the same request. `expectedVersion: 0` creates an entity; updates use the version read from a focused `query` response.
+
+See [focused coordination](COORDINATION.md) for the 1.1 query, batch, workspace, resource, check, execution and local measurement APIs. `state` is now compact by default; `state(full=true)` is an explicit export.
 
 ## Entities
 

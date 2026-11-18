@@ -47,7 +47,8 @@
             "args": ["hook"],
             "timeout": 120
           }
-        ]
+        ],
+        "matcher": "Write|Edit|MultiEdit|Bash|PowerShell"
       }
     ],
     "SubagentStop": [
@@ -96,6 +97,19 @@
             "timeout": 120
           }
         ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bootstrap/nexo",
+            "args": ["hook"],
+            "timeout": 120
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit|Bash|PowerShell"
       }
     ]
   }

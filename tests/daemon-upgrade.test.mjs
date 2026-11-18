@@ -106,7 +106,7 @@ test('upgrade replaces an older daemon once, preserving project data and active 
 test('an older client reuses a newer daemon instead of causing a downgrade loop', async () => {
   const f = fixture();
   f.store.close();
-  const newer = await fakeDaemon(f.root, '1.0.0-rc.99');
+  const newer = await fakeDaemon(f.root, `${Number(VERSION.split('.')[0]) + 1}.0.0-rc.99`);
   try {
     const result = await run(f.root);
     assert.equal(new URL(result.url).port, String(newer.registry.port));

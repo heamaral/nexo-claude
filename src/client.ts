@@ -103,7 +103,7 @@ export async function request(
     method: body === undefined ? 'GET' : 'POST',
     headers: { Authorization: `Bearer ${r.token}`, 'Content-Type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(route === 'run-check' ? 650_000 : 20_000),
   });
   const result = (await response.json()) as any;
   // Only retry an explicit rejection before execution. A network failure after
@@ -112,7 +112,10 @@ export async function request(
     await wait(100);
     return request(route, body, root, true);
   }
-  if (!response.ok) throw new Error(`${result.error}: ${result.message}`);
+  if (!response.ok)
+    throw new Error(
+      JSON.stringify({ error: result.error, message: result.message, details: result.details }),
+    );
   return result;
 }
 export async function board(root?: string, open = true) {

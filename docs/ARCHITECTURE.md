@@ -12,7 +12,7 @@ The installed plugin contains no project data. Its bundled runtime can be update
 2. The service validates the schema, expected version, conflict-free history, hierarchy, dependencies, completion, evidence and lease.
 3. A SQLite transaction records the new state and an outbox event. Constraints and `BEGIN IMMEDIATE` serialize claims.
 4. The event is exported to a new file through temporary writing, fsync and rename. The command returns only after export. A crash before export is recovered from the committed outbox on restart.
-5. SSE notifies browser clients. The browser fetches complete current state, including on reconnection after an instance restart.
+5. SSE notifies browser clients. The browser applies durable entity deltas and separate presence updates; it fetches complete state on initialization, history reset or an instance change.
 6. A queue rebuilds the distributable SQLite in a separate file, closes and validates it, then renames it over `project.sqlite`. Durable changes debounce for 500 ms with a 5-second maximum initial wait. Heartbeats and releases do not create snapshots. Explicit `snapshot` waits through the generation visible at invocation. File replacement failures have bounded asynchronous retries and automatic recovery; they do not make the live database unhealthy. See [concurrency details](CONCURRENCY.md).
 
 Runtime rows are not copied. The snapshot has empty agent tables for consistent inspection, but no leases, tokens or PIDs. Live SQLite in `local/` uses WAL and `synchronous=FULL`. WAL files are never committed.

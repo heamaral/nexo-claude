@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { DeliveryGraph } from './delivery-graph.js';
+import { RuntimeDiagnostics, ExecutionHistory } from './operations.js';
 type Entity = {
   kind: 'delivery' | 'team' | 'task';
   id: string;
@@ -59,6 +60,8 @@ type State = {
   entities: Entity[];
   agents: Agent[];
   revision: number;
+  durableRevision: number;
+  instance: string;
   eventCount: number;
   healthError?: string;
   snapshot?: { status: string; dirty: boolean; lastError: { code: string } | null };
@@ -99,6 +102,7 @@ function App() {
       source: EventSource | undefined,
       busy = false,
       again = false;
+    let current: State | undefined;
     const refresh = async () => {
       if (busy) {
         again = true;
@@ -106,14 +110,38 @@ function App() {
       }
       busy = true;
       try {
-        const response = await fetch('/api/state');
+        let response = await fetch(
+          current
+            ? `/api/changes?since=${current.durableRevision}&instance=${encodeURIComponent(current.instance)}`
+            : '/api/state',
+        );
         if (!response.ok)
           throw new Error(
             response.status === 401
               ? 'Open /board in Claude to authenticate this window.'
               : 'Could not read the project.',
           );
-        const data = await response.json();
+        let data = await response.json();
+        if (current && data.resetRequired) {
+          response = await fetch('/api/state');
+          if (!response.ok) throw new Error('Could not refresh the project.');
+          data = await response.json();
+          current = undefined;
+        }
+        if (current) {
+          const patches = new Map<string, Entity>(data.entities.map((e: Entity) => [e.id, e]));
+          data.entities = patches.size
+            ? current.entities
+                .map((e) => {
+                  const patch = patches.get(e.id);
+                  patches.delete(e.id);
+                  return patch ?? e;
+                })
+                .concat([...patches.values()])
+            : current.entities;
+          data = { ...current, ...data };
+        }
+        current = data;
         if (!stopped) {
           setState(data);
           setError('');
@@ -145,6 +173,21 @@ function App() {
         source = new EventSource('/api/events');
         source.onopen = () => setConnection('online');
         source.addEventListener('change', () => void refresh());
+        source.addEventListener('presence', (event) => {
+          const data = JSON.parse((event as MessageEvent).data);
+          if (!current || data.instance !== current.instance) {
+            void refresh();
+            return;
+          }
+          current = {
+            ...current,
+            agents: data.agents,
+            project: data.project ?? current.project,
+            revision: data.revision,
+            snapshot: data.snapshot,
+          };
+          if (!stopped) setState(current);
+        });
         source.onerror = () => {
           setConnection('reconnecting');
         };
@@ -290,6 +333,13 @@ function App() {
           <div className="blocker">
             <OctagonX />
             {t.data.blocker}
+          </div>
+        )}
+        {t.data.waiting && (
+          <div className="wait-label">
+            <Clock3 />
+            Waiting for {t.data.waiting.reason.replaceAll('-', ' ')}
+            <span>{t.data.waiting.owner}</span>
           </div>
         )}
         {sub.length > 0 && (
@@ -922,6 +972,7 @@ function App() {
           </h2>
           {detail?.type === 'policy' ? (
             <>
+              <RuntimeDiagnostics />
               <p>These limits belong to this project and include all agents registered in Nexo.</p>
               <div className="info-grid">
                 <div>
@@ -1065,6 +1116,36 @@ function App() {
                     <p className="result">{entity.data.result}</p>
                   </>
                 )}
+                {entity.kind === 'task' && entity.data.waiting && (
+                  <section className="operation-panel">
+                    <h3>Waiting for {entity.data.waiting.reason.replaceAll('-', ' ')}</h3>
+                    <p>{entity.data.waiting.nextAction}</p>
+                    <small>
+                      {entity.data.waiting.owner} · Since{' '}
+                      {new Date(entity.data.waiting.since).toLocaleString()}
+                    </small>
+                  </section>
+                )}
+                {entity.kind === 'task' && entity.data.checkpoint && (
+                  <section className="operation-panel">
+                    <h3>Resume checkpoint</h3>
+                    <p>{entity.data.checkpoint.goal}</p>
+                    <ul>
+                      {entity.data.checkpoint.remaining.map((v: string) => (
+                        <li key={v}>{v}</li>
+                      ))}
+                    </ul>
+                    <strong>Next: {entity.data.checkpoint.nextStep}</strong>
+                    <div className="reference-list">
+                      {entity.data.checkpoint.references.map((v: string) => (
+                        <code key={v}>{v}</code>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {entity.kind === 'task' && (
+                  <ExecutionHistory taskId={entity.id} revision={state?.durableRevision ?? 0} />
+                )}
                 {entity.data.evidence?.length > 0 && (
                   <>
                     <h3>Evidence</h3>
@@ -1073,6 +1154,11 @@ function App() {
                         <ShieldCheck />
                         <div>
                           <strong>{e.label}</strong>
+                          <small>
+                            {e.checkId
+                              ? `Reported ${e.status ?? 'unverified'} · ${e.scope ?? 'unspecified'} · ${e.checkId}`
+                              : 'Recorded evidence; no automated check attestation'}
+                          </small>
                           {e.commit && <code>{e.commit}</code>}
                           {e.url && /^https?:\/\//.test(e.url) && (
                             <a href={e.url} target="_blank" rel="noreferrer">

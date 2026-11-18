@@ -158,9 +158,15 @@ test('closed SQLite snapshot excludes leases, recovers from events, follows bran
           grow = true;
         }
     }
+    const durableRevision = f.store.durableRevision;
     for (const id of removed) fs.rmSync(path.join(f.root, '.nexo/events', id + '.json'));
     f.store.sync();
     assert.equal(f.store.get('integrate'), undefined);
+    assert.equal(
+      f.store.coordination.query({ view: 'changes', sinceRevision: durableRevision }).resetRequired,
+      true,
+      'branch removal must invalidate board deltas',
+    );
     assert.equal(f.store.events().length, before - removed.size);
     assert.equal(f.store.agents().length, 0);
     f.store.close();

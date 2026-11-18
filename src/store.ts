@@ -20,6 +20,7 @@ import {
 import { atomicWrite, loadConfig, localDir, safeEventsDir } from './project.js';
 import { acquireWriter } from './locks.js';
 import { Snapshots } from './snapshots.js';
+import { Coordination, coordinationTables } from './coordination.js';
 
 const schema = `PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -53,6 +54,13 @@ export class Store {
   dir: string;
   eventsDir: string;
   revision = 0;
+  durableRevision = 0;
+  changeFloor = 0;
+  changeLog = new Map<string, number>();
+  private versions = new Map<string, string>();
+  private transactionDepth = 0;
+  private batching = false;
+  coordination!: Coordination;
   onChange = (_durable: boolean) => {};
   snapshots!: Snapshots;
   private releaseWriter: () => void;
@@ -68,6 +76,8 @@ export class Store {
       this.db = new DatabaseSync(path.join(this.dir, 'state.sqlite'), { timeout: 5000 });
       this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
       this.db.exec(schema);
+      this.db.exec(coordinationTables);
+      this.coordination = new Coordination(this);
       const version = this.db.prepare('SELECT value FROM meta WHERE key=?').get('schema');
       assert(
         !version || version.value === '1',
@@ -129,19 +139,49 @@ export class Store {
       .all();
   }
   transaction<T>(fn: () => T): T {
-    this.db.exec('BEGIN IMMEDIATE');
+    const depth = this.transactionDepth;
+    const nested = depth > 0;
+    const name = `nexo_${depth + 1}`;
+    this.db.exec(nested ? `SAVEPOINT ${name}` : 'BEGIN IMMEDIATE');
+    this.transactionDepth = depth + 1;
     try {
       const value = fn();
-      this.db.exec('COMMIT');
+      this.db.exec(nested ? `RELEASE ${name}` : 'COMMIT');
       return value;
     } catch (e) {
-      this.db.exec('ROLLBACK');
+      this.db.exec(nested ? `ROLLBACK TO ${name}` : 'ROLLBACK');
+      if (nested) this.db.exec(`RELEASE ${name}`);
       throw e;
+    } finally {
+      this.transactionDepth = depth;
     }
   }
   changed(durable = true) {
+    if (this.batching) return;
     this.revision++;
-    if (durable) this.snapshots.markDirty();
+    if (durable) {
+      this.durableRevision++;
+      const current = this.all();
+      const ids = new Set(current.map((e) => e.id));
+      if ([...this.versions.keys()].some((key) => !ids.has(key))) {
+        this.changeFloor = this.durableRevision;
+        this.changeLog.clear();
+        this.versions.clear();
+      }
+      for (const e of current) {
+        const stamp = crypto
+          .createHash('sha256')
+          .update(JSON.stringify([e.version, e.updatedAt, e.data]))
+          .digest('hex');
+        if (this.versions.get(e.id) !== stamp) this.changeLog.set(e.id, this.durableRevision);
+        this.versions.set(e.id, stamp);
+      }
+      if (this.changeLog.size > 10000) {
+        this.changeFloor = this.durableRevision;
+        this.changeLog.clear();
+      }
+      this.snapshots.markDirty();
+    }
     this.onChange(durable);
   }
   validate(command: Command): Entity {
@@ -329,6 +369,7 @@ export class Store {
           );
         }
         if (phase === 'done') {
+          assert(!data.waiting, 'WAITING', 'Resolve the waiting reason before completion');
           assert(
             childData(data.id).every(isDone),
             'CHILDREN_PENDING',
@@ -340,7 +381,7 @@ export class Store {
             'Completion requires a result and evidence',
           );
           const gates = delivery.data.workflow.filter((s: any) => s.gate);
-          if (gates.length)
+          if (gates.length && data.workType !== 'research')
             assert(
               data.evidence.some((e: any) => e.commit),
               'COMMIT_REQUIRED',
@@ -386,7 +427,7 @@ export class Store {
   }
   execute(raw: unknown) {
     const command = commandSchema.parse(raw);
-    this.sync(false);
+    if (!this.batching) this.sync(false);
     assert(
       !this.conflicts().length,
       'MERGE_CONFLICT',
@@ -403,8 +444,30 @@ export class Store {
         'IDEMPOTENCY_MISMATCH',
         'commandId reused with different content',
       );
-      this.exportEvents();
+      if (!this.batching) this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
+    }
+    if (command.kind === 'task' && Array.isArray(command.data.evidence)) {
+      const fields = new Set([
+        'label',
+        'url',
+        'commit',
+        'repoId',
+        'checkId',
+        'runId',
+        'fingerprint',
+        'status',
+        'scope',
+        'artifact',
+      ]);
+      for (const evidence of command.data.evidence)
+        if (evidence && typeof evidence === 'object')
+          assert(
+            Object.keys(evidence).every((key) => fields.has(key)),
+            'INVALID_EVIDENCE_FIELDS',
+            'Evidence contains unsupported fields; keep lease credentials only in runtime context',
+            400,
+          );
     }
     const result = this.transaction(() => {
       const claims = this.agents().filter(
@@ -454,6 +517,14 @@ export class Store {
           );
       }
       const { leaseToken: _, ...clean } = command;
+      if (command.kind === 'task') {
+        const next = this.validate(command);
+        if (this.coordination.phase(next) === 'done')
+          this.coordination.verifyCompletion(next, command);
+      }
+      if (command.kind === 'delivery' && command.op === 'accept')
+        for (const task of this.all('task').filter((t) => t.data.deliveryId === command.id))
+          this.coordination.verifyCompletion(task, command);
       const parents = JSON.parse(
         String(
           this.db.prepare('SELECT value FROM meta WHERE key=?').get('frontier')?.value ?? '[]',
@@ -478,13 +549,38 @@ export class Store {
       if (command.kind === 'task') {
         const d = this.get(entity.data.deliveryId);
         if (d?.data.workflow.find((s: any) => s.id === entity.data.stageId)?.phase === 'done')
-          this.db.prepare('DELETE FROM agents WHERE task_id=?').run(command.id);
+          for (const a of this.agents().filter((a) => a.taskId === command.id)) {
+            this.coordination.finish(a, 'completed');
+            this.db.prepare('DELETE FROM agents WHERE token=?').run(a.token);
+          }
       }
       return { entity, eventId: event.id, duplicate: false };
     });
     this.changed();
-    this.exportEvents();
+    if (!this.batching) this.exportEvents();
     return result;
+  }
+  executeBatch(commands: unknown[], preview = true) {
+    this.sync(false);
+    assert(!this.batching, 'BATCH_ACTIVE', 'Nested batches are not supported');
+    const rollback = new Error('preview');
+    let results: ReturnType<Store['execute']>[] = [];
+    this.batching = true;
+    try {
+      this.transaction(() => {
+        results = commands.map((command) => this.execute(command));
+        if (preview) throw rollback;
+      });
+    } catch (error) {
+      if (error !== rollback) throw error;
+    } finally {
+      this.batching = false;
+    }
+    if (!preview) {
+      this.changed();
+      this.exportEvents();
+    }
+    return results;
   }
   exportEvents() {
     let wrote = false;
@@ -743,8 +839,38 @@ export class Store {
   }
   claim(raw: unknown) {
     const claim = claimSchema.parse(raw);
+    claim.scopes = [...new Set(claim.scopes.map(normalizeScope))].sort();
     this.sync(false);
     assert(!this.conflicts().length, 'MERGE_CONFLICT', 'Resolve conflicts before starting work');
+    const existing = this.agents().find(
+      (a) => a.agentId === claim.agentId && a.state === 'working',
+    );
+    if (existing) {
+      const resources = [
+        ...new Set([...(this.get(claim.taskId)?.data.resources ?? []), ...claim.resources]),
+      ].sort();
+      const same =
+        existing.taskId === claim.taskId &&
+        existing.sessionId === claim.sessionId &&
+        existing.role === claim.role &&
+        existing.teamId === claim.teamId &&
+        existing.workspaceId === claim.workspaceId &&
+        JSON.stringify([...existing.scopes].sort()) === JSON.stringify(claim.scopes) &&
+        JSON.stringify([...(existing.resources ?? [])].sort()) === JSON.stringify(resources) &&
+        (!claim.executionId || claim.executionId === existing.executionId);
+      if (same) return { ...existing, duplicate: true };
+      throw new NexoError(
+        'AGENT_ACTIVE',
+        'Agent owns another execution or scope; recover its assignment, checkpoint and release before switching.',
+        409,
+        {
+          taskId: existing.taskId,
+          executionId: existing.executionId,
+          expiresAt: existing.expiresAt,
+          fence: existing.fence,
+        },
+      );
+    }
     const agent = this.transaction(() => {
       const task = this.get(claim.taskId);
       assert(task?.kind === 'task', 'INVALID_TASK', 'Card not found');
@@ -773,6 +899,7 @@ export class Store {
         'Agent already registered; use heartbeat',
       );
       const active = this.agents().filter((a) => a.state === 'working');
+      this.coordination.validateClaim(claim);
       assert(active.length < this.config.maxAgents, 'CAPACITY', 'Project capacity reached');
       if (claim.teamId) {
         const team = this.get(claim.teamId);
@@ -813,7 +940,14 @@ export class Store {
       const scopes = claim.scopes.map(normalizeScope);
       claim.scopes = scopes;
       if (claim.role !== 'reviewer')
-        for (const a of active.filter((a) => a.role !== 'reviewer'))
+        for (const a of active.filter(
+          (a) =>
+            a.role !== 'reviewer' &&
+            (a.workspaceId ? this.coordination.workspace(a.workspaceId)?.path : this.root) ===
+              (claim.workspaceId
+                ? this.coordination.workspace(claim.workspaceId)?.path
+                : this.root),
+        ))
           assert(
             !scopes.some((s) => a.scopes.some((t) => overlap(s, t))),
             'SCOPE_CONFLICT',
@@ -830,12 +964,15 @@ export class Store {
         .run(claim.taskId, fence);
       const agent: Agent = {
         ...claim,
+        executionId: claim.executionId ?? crypto.randomUUID(),
         token: crypto.randomBytes(32).toString('base64url'),
         fence,
         startedAt: Date.now(),
         expiresAt: Date.now() + claim.ttlSeconds * 1000,
         state: 'working',
       };
+      const previous = this.agents().find((a) => a.agentId === agent.agentId);
+      if (previous) this.coordination.finish(previous);
       this.db
         .prepare('INSERT OR REPLACE INTO agents VALUES(?,?,?,?,?,?)')
         .run(
@@ -846,6 +983,7 @@ export class Store {
           JSON.stringify(agent),
           agent.expiresAt,
         );
+      this.coordination.begin(agent);
       return agent;
     });
     try {
@@ -899,6 +1037,8 @@ export class Store {
     });
   }
   release(token: string) {
+    const agent = this.agents().find((a) => a.token === token);
+    if (agent) this.coordination.finish(agent);
     this.db.prepare('DELETE FROM agents WHERE token=?').run(token);
     this.changed(false);
     return { released: true };

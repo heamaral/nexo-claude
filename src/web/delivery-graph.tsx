@@ -62,7 +62,8 @@ export function DeliveryGraph({
     () => buildGraph(tasks as any, delivery.id, mode),
     [tasks, delivery.id, mode],
   );
-  const layout = useMemo(() => layoutGraph(graph.nodes, graph.edges), [graph]);
+  const topology = JSON.stringify([graph.nodes.map((n) => n.id), graph.edges]);
+  const layout = useMemo(() => layoutGraph(graph.nodes, graph.edges), [topology]);
   const workingIds = new Set(agents.filter((a) => a.state === 'working').map((a) => a.taskId));
   const childIds = new Map<string, string[]>();
   for (const t of tasks)

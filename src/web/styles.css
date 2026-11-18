@@ -1640,3 +1640,108 @@ dialog::backdrop {
     padding-right: 16px;
   }
 }
+
+.operation-panel {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin: 20px 0;
+  background: var(--panel);
+}
+.operation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.operation-panel h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.operation-panel svg,
+.wait-label svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.operation-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.operation-list small,
+.execution-timeline small,
+.evidence small {
+  display: block;
+  opacity: 0.65;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.operation-list strong {
+  text-align: right;
+  font-size: 12px;
+}
+.break-path {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  margin: 8px 0;
+}
+.wait-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  color: #c69245;
+  margin: 10px 0;
+}
+.wait-label span {
+  margin-left: auto;
+}
+.reference-list code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.execution-timeline {
+  list-style: none;
+  padding: 0;
+}
+.execution-timeline li {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+}
+.execution-timeline strong {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+.execution-timeline code {
+  font-size: 10px;
+  opacity: 0.6;
+}
+.execution-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9a92b5;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.execution-dot.working {
+  background: #a58cff;
+  box-shadow: 0 0 0 4px #a58cff22;
+}
+.execution-dot.completed {
+  background: #65c79b;
+}
+.success-text {
+  color: #65c79b;
+}
+.warning-text {
+  color: #c69245;
+}

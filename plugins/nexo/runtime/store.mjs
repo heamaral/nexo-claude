@@ -6,9 +6,9 @@ var __export = (target, all) => {
 };
 
 // src/store.ts
-import fs5 from "node:fs";
-import path4 from "node:path";
-import crypto2 from "node:crypto";
+import fs6 from "node:fs";
+import path5 from "node:path";
+import crypto3 from "node:crypto";
 import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
 
 // node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/external.js
@@ -828,10 +828,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema2) {
   return mergeDefs(schema2._zod.def);
 }
-function getElementAtPath(obj, path5) {
-  if (!path5)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path5.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -1171,11 +1171,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path5, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path5);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -1637,16 +1637,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path5 = []) => {
+  const processError = (error63, path6 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -1685,17 +1685,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path5 = []) => {
+  const processError = (error63, path6 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -1734,8 +1734,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path5) {
+  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path6) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -18873,13 +18873,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path5 = ref.slice(1).split("/").filter(Boolean);
-  if (path5.length === 0) {
+  const path6 = ref.slice(1).split("/").filter(Boolean);
+  if (path6.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path5[0] === defsKey) {
-    const key = path5[1] === void 0 ? void 0 : decodeJSONPointerSegment(path5[1]);
+  if (path6[0] === defsKey) {
+    const key = path6[1] === void 0 ? void 0 : decodeJSONPointerSegment(path6[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -19735,7 +19735,8 @@ var stageSchema = external_exports.object({
   id,
   name: text.max(80),
   phase: external_exports.enum(["queued", "active", "review", "done"]),
-  gate: external_exports.string().max(2e3).optional()
+  gate: external_exports.string().max(2e3).optional(),
+  checks: external_exports.array(id).max(30).optional()
 }).strict();
 var workflowSchema = external_exports.array(stageSchema).min(2).max(30).refine(
   (v) => new Set(v.map((s) => s.id)).size === v.length && v.some((s) => s.phase === "done") && v.some((s) => s.phase === "queued"),
@@ -19772,12 +19773,42 @@ var taskSchema = external_exports.object({
   dependencies: external_exports.array(id).max(200).default([]),
   criteria: external_exports.array(text).max(50).default([]),
   blocker: external_exports.string().max(2e3).optional(),
+  waiting: external_exports.object({
+    reason: external_exports.enum(["dependency", "resource", "integration", "user-test", "decision"]),
+    nextAction: text,
+    owner: text.max(200),
+    since: external_exports.string().datetime()
+  }).strict().nullable().optional(),
+  source: external_exports.object({
+    adapter: id,
+    id: external_exports.string().min(1).max(200),
+    status: external_exports.string().max(100).optional()
+  }).strict().optional(),
+  aliases: external_exports.array(external_exports.string().min(1).max(200)).max(50).optional(),
+  resources: external_exports.array(id).max(30).optional(),
+  workType: external_exports.enum(["research", "implementation", "integration"]).optional(),
+  checkpoint: external_exports.object({
+    goal: text,
+    remaining: external_exports.array(text).max(30),
+    decisions: external_exports.array(text).max(30).default([]),
+    rejected: external_exports.array(text).max(30).default([]),
+    references: external_exports.array(external_exports.string().max(1e3)).max(100).default([]),
+    nextStep: text,
+    sourceCommit: external_exports.string().regex(/^[a-f0-9]{40,64}$/).optional()
+  }).strict().optional(),
   result: external_exports.string().max(12e3).default(""),
   evidence: external_exports.array(
     external_exports.object({
       label: text,
       url: external_exports.string().max(2e3).optional(),
-      commit: external_exports.string().regex(/^[a-f0-9]{7,64}$/).optional()
+      commit: external_exports.string().regex(/^[a-f0-9]{7,64}$/).optional(),
+      repoId: id.optional(),
+      checkId: id.optional(),
+      runId: id.optional(),
+      fingerprint: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
+      status: external_exports.enum(["PASS", "FAIL", "BLOCKED", "STALE"]).optional(),
+      scope: external_exports.enum(["research", "draft", "integrated"]).optional(),
+      artifact: external_exports.string().max(1e3).optional()
     })
   ).max(100).default([])
 }).strict();
@@ -19811,16 +19842,24 @@ var claimSchema = external_exports.object({
   sessionId: external_exports.string().max(200).optional(),
   activity: external_exports.string().max(500).default("Working"),
   scopes: external_exports.array(external_exports.string().min(1).max(500)).min(1).max(50),
-  ttlSeconds: external_exports.number().int().min(30).max(600).default(120)
+  ttlSeconds: external_exports.number().int().min(30).max(600).default(120),
+  workspaceId: id.optional(),
+  resources: external_exports.array(id).max(30).default([]),
+  executionId: id.optional(),
+  parentExecutionId: id.optional(),
+  model: external_exports.string().max(100).optional(),
+  effort: external_exports.enum(["low", "medium", "high", "max"]).optional()
 }).strict();
 var NexoError = class extends Error {
-  constructor(code, message, status = 409) {
+  constructor(code, message, status = 409, details) {
     super(message);
     this.code = code;
     this.status = status;
+    this.details = details;
   }
   code;
   status;
+  details;
 };
 function assert2(ok, code, message, status = 409) {
   if (!ok) throw new NexoError(code, message, status);
@@ -19891,6 +19930,32 @@ function atomicWrite(file2, data, mode = 384) {
     } catch {
     }
     throw e;
+  }
+}
+function gitDirectory(cwd) {
+  let current = fs2.realpathSync.native(cwd);
+  for (; ; ) {
+    const entry = path2.join(current, ".git");
+    if (fs2.existsSync(entry)) {
+      const stat = fs2.lstatSync(entry);
+      assert2(
+        !stat.isSymbolicLink(),
+        "UNSAFE_GIT_DIRECTORY",
+        "Git metadata must not be a symbolic link"
+      );
+      if (stat.isDirectory()) return entry;
+      assert2(
+        stat.isFile() && stat.size <= 8192,
+        "UNSAFE_GIT_DIRECTORY",
+        "Invalid Git worktree pointer"
+      );
+      const match = /^gitdir:\s*([^\r\n]+)\s*$/.exec(fs2.readFileSync(entry, "utf8"));
+      assert2(match, "UNSAFE_GIT_DIRECTORY", "Invalid Git worktree pointer");
+      return fs2.realpathSync.native(path2.resolve(current, match[1].trim()));
+    }
+    const parent = path2.dirname(current);
+    if (parent === current) return;
+    current = parent;
   }
 }
 function loadConfig(root) {
@@ -20123,6 +20188,1173 @@ var Snapshots = class {
   }
 };
 
+// src/coordination.ts
+import fs5 from "node:fs";
+import path4 from "node:path";
+import crypto2 from "node:crypto";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
+var coordinationTables = `
+CREATE TABLE IF NOT EXISTS executions(id TEXT PRIMARY KEY, task_id TEXT NOT NULL, data TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS executions_task ON executions(task_id);
+CREATE TABLE IF NOT EXISTS import_jobs(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, result TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS usage_samples(id TEXT PRIMARY KEY, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS workspaces(id TEXT PRIMARY KEY, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS hook_seen(id TEXT PRIMARY KEY, at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS check_runs(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS coordination_metrics(key TEXT PRIMARY KEY, count INTEGER NOT NULL, bytes INTEGER NOT NULL, latency_ms REAL NOT NULL);
+`;
+var digest = (v) => crypto2.createHash("sha256").update(v).digest("hex");
+var executeFile = promisify(execFile);
+async function gitRead(cwd, args) {
+  const { stdout } = await executeFile("git", args, {
+    cwd,
+    encoding: "utf8",
+    timeout: 2e4,
+    maxBuffer: 2 * 1024 * 1024,
+    windowsHide: true
+  });
+  return stdout.trim();
+}
+var executionSummarySchema = external_exports.object({
+  schema: external_exports.literal(1),
+  projectId: external_exports.string().uuid(),
+  id,
+  deliveryId: id,
+  taskId: id,
+  parentExecutionId: id.optional(),
+  model: external_exports.string().max(100).optional(),
+  effort: external_exports.string().max(20).optional(),
+  startedAt: external_exports.number().int().nonnegative(),
+  finishedAt: external_exports.number().int().nonnegative().optional(),
+  status: external_exports.enum(["released", "completed", "lost_contact"])
+}).strict();
+var configSchema2 = external_exports.object({
+  schema: external_exports.literal(1),
+  telemetry: external_exports.boolean().default(false),
+  resources: external_exports.array(
+    external_exports.object({
+      id,
+      capacity: external_exports.number().int().min(1).max(128),
+      owner: external_exports.string().max(200).optional()
+    }).strict()
+  ).max(100).default([]),
+  repositories: external_exports.array(
+    external_exports.object({
+      id,
+      path: external_exports.string().min(1).max(1e3),
+      integratedRef: external_exports.string().regex(/^[a-zA-Z0-9_./-]+$/).default("HEAD")
+    }).strict()
+  ).max(30).default([]),
+  checks: external_exports.array(
+    external_exports.object({
+      id,
+      repoId: id,
+      artifact: external_exports.string().min(1).max(1e3),
+      executable: external_exports.string().min(1).max(1e3).optional(),
+      args: external_exports.array(external_exports.string().max(2e3)).max(100).default([]),
+      timeoutSeconds: external_exports.number().int().min(1).max(600).default(120),
+      resourceId: id.optional()
+    }).strict()
+  ).max(100).default([]),
+  adapters: external_exports.array(
+    external_exports.object({
+      id,
+      path: external_exports.string().min(1).max(1e3),
+      stageMap: external_exports.record(external_exports.string(), external_exports.string()).default({})
+    }).strict()
+  ).max(30).default([]),
+  externalWrites: external_exports.array(external_exports.object({ resourceId: id, path: external_exports.string().min(1).max(1e3) }).strict()).max(30).default([])
+}).strict();
+var querySchema = external_exports.object({
+  view: external_exports.enum([
+    "summary",
+    "task",
+    "delivery",
+    "assignment",
+    "search",
+    "changes",
+    "diagnostics",
+    "executions",
+    "export"
+  ]).default("summary"),
+  id: external_exports.string().max(200).optional(),
+  sessionId: external_exports.string().max(200).optional(),
+  query: external_exports.string().max(200).optional(),
+  kind: external_exports.enum(["delivery", "task", "team"]).optional(),
+  stageId: id.optional(),
+  deliveryId: id.optional(),
+  cursor: external_exports.string().max(200).optional(),
+  limit: external_exports.number().int().min(1).max(100).default(30),
+  fields: external_exports.array(
+    external_exports.enum([
+      "description",
+      "criteria",
+      "evidence",
+      "checkpoint",
+      "result",
+      "dependencies",
+      "source"
+    ])
+  ).max(7).default([]),
+  sinceRevision: external_exports.number().int().nonnegative().optional(),
+  instance: external_exports.string().max(100).optional(),
+  maxBytes: external_exports.number().int().min(2048).max(65536).default(24e3),
+  section: external_exports.enum([
+    "ancestors",
+    "children",
+    "dependencies",
+    "criteria",
+    "evidence",
+    "references",
+    "decisions",
+    "remaining"
+  ]).optional()
+}).strict();
+var batchSchema = external_exports.object({
+  jobId: id,
+  preview: external_exports.boolean().default(true),
+  commands: external_exports.array(commandSchema).min(1).max(100)
+}).strict();
+var workspaceSchema = external_exports.object({
+  id,
+  path: external_exports.string().min(1).max(1e3),
+  mode: external_exports.enum(["shared", "isolated"]),
+  coordination: external_exports.enum(["shared", "independent"]).default("shared"),
+  expectedProjectId: external_exports.string().uuid()
+}).strict();
+var usageSchema = external_exports.object({
+  id,
+  executionId: id,
+  input: external_exports.number().int().nonnegative().max(1e10).default(0),
+  cacheRead: external_exports.number().int().nonnegative().max(1e10).default(0),
+  cacheWrite: external_exports.number().int().nonnegative().max(1e10).default(0),
+  output: external_exports.number().int().nonnegative().max(1e10).default(0),
+  source: external_exports.enum(["provider", "estimate"]),
+  category: external_exports.enum(["work", "coordination", "recovery"]).default("work"),
+  latencyMs: external_exports.number().nonnegative().max(864e5).optional(),
+  responseBytes: external_exports.number().int().nonnegative().max(1e9).optional()
+}).strict();
+var runCheckSchema = external_exports.object({ checkId: id, taskId: id, token: external_exports.string().min(1).max(200) }).strict();
+var Coordination = class {
+  constructor(store) {
+    this.store = store;
+  }
+  store;
+  verification = /* @__PURE__ */ new Map();
+  runningChecks = /* @__PURE__ */ new Map();
+  prepared = /* @__PURE__ */ new Map();
+  config() {
+    const file2 = path4.join(this.store.root, ".nexo", "coordination.json");
+    if (!fs5.existsSync(file2)) return configSchema2.parse({ schema: 1 });
+    assert2(
+      !fs5.lstatSync(file2).isSymbolicLink(),
+      "SYMLINK_DENIED",
+      "Coordination config cannot be a symlink"
+    );
+    assert2(fs5.statSync(file2).size <= 262144, "CONFIG_LIMIT", "Coordination config exceeds 256 KiB");
+    const cfg = configSchema2.parse(JSON.parse(fs5.readFileSync(file2, "utf8")));
+    for (const key of ["resources", "repositories", "checks", "adapters"])
+      assert2(
+        new Set(cfg[key].map((v) => v.id)).size === cfg[key].length,
+        "DUPLICATE_ID",
+        `Duplicate ${key} IDs`
+      );
+    return cfg;
+  }
+  publicAgent(a) {
+    const { token: _, sessionId: __, ...safe } = a;
+    return safe;
+  }
+  phase(t) {
+    return this.store.get(t.data.deliveryId)?.data.workflow.find((s) => s.id === t.data.stageId)?.phase;
+  }
+  compact(e, fields = []) {
+    const d = e.data;
+    const data = { title: d.title };
+    for (const k of [
+      "deliveryId",
+      "parentId",
+      "teamId",
+      "stageId",
+      "status",
+      "blocker",
+      "waiting",
+      "resources"
+    ])
+      if (d[k] !== void 0) data[k] = d[k];
+    for (const k of fields) if (d[k] !== void 0) data[k] = d[k];
+    if (e.kind === "task") {
+      data.phase = this.phase(e);
+      data.dependencyCount = d.dependencies.length;
+    }
+    if (e.kind === "delivery") data.workflow = d.workflow;
+    if (e.kind === "team") {
+      data.engine = d.engine;
+      data.maxAgents = d.maxAgents;
+    }
+    return { id: e.id, kind: e.kind, version: e.version, updatedAt: e.updatedAt, data };
+  }
+  query(raw) {
+    const q = querySchema.parse(raw), value = this.queryValue(q);
+    if (q.view !== "export" && Buffer.byteLength(JSON.stringify(value)) > q.maxBytes)
+      return {
+        apiVersion: 2,
+        revision: this.store.revision,
+        durableRevision: this.store.durableRevision,
+        budgetExceeded: true,
+        resetRequired: q.view === "changes",
+        nextAction: "Narrow the delivery, task, fields or page. Explicit export is available for a full record."
+      };
+    return value;
+  }
+  queryValue(raw) {
+    const q = querySchema.parse(raw), s = this.store;
+    const base = {
+      schemaVersion: 1,
+      apiVersion: 2,
+      revision: s.revision,
+      durableRevision: s.durableRevision
+    };
+    if (q.view === "changes") {
+      const since = q.sinceRevision ?? 0;
+      const reset = since < s.changeFloor || since > s.durableRevision;
+      return {
+        ...base,
+        resetRequired: reset,
+        entities: reset ? [] : [...s.changeLog.entries()].filter(([, r]) => r > since).map(([key]) => s.get(key)).filter(Boolean),
+        agents: s.agents().map((a) => this.publicAgent(a))
+      };
+    }
+    if (q.view === "export")
+      return { ...s.state(), apiVersion: 2, durableRevision: s.durableRevision };
+    if (q.view === "diagnostics") return { ...base, ...this.diagnostics() };
+    if (q.view === "assignment") {
+      assert2(q.id || q.sessionId, "IDENTITY_REQUIRED", "Supply agent ID or session ID", 400);
+      const agents = s.agents().filter(
+        (a) => (!q.id || a.agentId === q.id) && (!q.sessionId || a.sessionId === q.sessionId)
+      );
+      return {
+        ...base,
+        agents: agents.map((a) => this.publicAgent(a)),
+        tasks: agents.map((a) => s.get(a.taskId)).filter(Boolean).map((e) => this.compact(e, ["criteria", "checkpoint"])),
+        recovery: "Renew a working lease. An expired lease requires a new claim and fence. Tokens are returned only by claim."
+      };
+    }
+    if (q.view === "executions") return this.page(this.executions(q.id), q, base);
+    if (q.view === "task") {
+      const e = s.get(q.id ?? "");
+      assert2(e?.kind === "task", "NOT_FOUND", "Task not found", 404);
+      const ancestors = [];
+      let p = e.data.parentId;
+      while (p) {
+        const parent = s.get(p);
+        if (!parent) break;
+        ancestors.push(parent);
+        p = parent.data.parentId;
+      }
+      if (q.section) {
+        const values = q.section === "ancestors" ? ancestors : q.section === "children" ? s.all("task").filter((v) => v.data.parentId === e.id) : q.section === "dependencies" ? e.data.dependencies.map((key) => s.get(key)).filter(Boolean) : ["references", "decisions", "remaining"].includes(q.section) ? e.data.checkpoint?.[q.section] ?? [] : e.data[q.section] ?? [];
+        return this.page(
+          values.map((v, index) => ({
+            id: String(index).padStart(8, "0"),
+            value: v?.kind ? this.compact(v, q.fields) : v
+          })),
+          q,
+          { ...base, taskId: e.id, version: e.version, section: q.section }
+        );
+      }
+      const result = {
+        ...base,
+        task: this.compact(e, ["criteria", "dependencies", "checkpoint", "evidence", ...q.fields]),
+        ancestors: ancestors.map((v) => this.compact(v)),
+        dependencies: e.data.dependencies.map((key) => s.get(key)).filter(Boolean).map((v) => this.compact(v)),
+        children: s.all("task").filter((v) => v.data.parentId === e.id).map((v) => this.compact(v)),
+        agents: s.agents().filter((a) => a.taskId === e.id).map((a) => this.publicAgent(a)),
+        checks: this.checks(e),
+        nextAction: this.readiness(e)
+      };
+      if (Buffer.byteLength(JSON.stringify(result)) > q.maxBytes)
+        return {
+          ...base,
+          task: this.compact(e),
+          oversized: true,
+          nextAction: "Request task sections with section=criteria|children|dependencies|evidence|ancestors|references and nextCursor; use export for a full record."
+        };
+      return result;
+    }
+    if (q.view === "summary") {
+      const tasks = s.all("task"), counts = {};
+      for (const t of tasks) {
+        const phase = this.phase(t) ?? "unknown";
+        counts[phase] = (counts[phase] ?? 0) + 1;
+      }
+      return this.page(
+        s.all("delivery").map((e) => this.compact(e)),
+        q,
+        {
+          ...base,
+          project: s.config,
+          counts,
+          agents: s.agents().length,
+          conflicts: s.conflicts().length,
+          snapshot: s.snapshots.state(),
+          guidance: "Use task for worker context, delivery for planning, assignment to recover ownership. Full export is explicit."
+        }
+      );
+    }
+    let list = s.all(q.kind);
+    if (q.view === "search") {
+      const needle = (q.query ?? "").toLocaleLowerCase();
+      const matched = new Set(s.search(q.query ?? "").map((e) => e.id));
+      list = list.filter(
+        (e) => matched.has(e.id) || [
+          e.id,
+          ...e.data.aliases ?? [],
+          ...e.data.evidence?.map((v) => [v.artifact, v.url, v.checkId].join(" ")) ?? [],
+          ...e.data.checkpoint?.references ?? []
+        ].some((v) => v?.toLocaleLowerCase().includes(needle))
+      );
+    }
+    const deliveryId = q.deliveryId ?? (q.view === "delivery" ? q.id : void 0);
+    if (deliveryId)
+      list = list.filter((e) => e.id === deliveryId || e.data.deliveryId === deliveryId);
+    if (q.stageId) list = list.filter((e) => e.data.stageId === q.stageId);
+    return this.page(
+      list.map((e) => this.compact(e, q.fields)),
+      q,
+      base
+    );
+  }
+  page(items, q, base, preserveOrder = false) {
+    const sorted = preserveOrder ? items : items.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    const candidates = preserveOrder ? sorted.slice(q.cursor ? sorted.findIndex((v) => v.id === q.cursor) + 1 : 0) : sorted.filter((v) => !q.cursor || v.id > q.cursor);
+    const selected = [];
+    let oversizedId;
+    for (const v of candidates.slice(0, q.limit)) {
+      if (Buffer.byteLength(JSON.stringify({ ...base, items: [...selected, v] })) > q.maxBytes - 512) {
+        if (!selected.length) oversizedId = v.id;
+        break;
+      }
+      selected.push(v);
+    }
+    return {
+      ...base,
+      items: selected,
+      total: sorted.length,
+      nextCursor: selected.length < candidates.length ? selected.at(-1)?.id ?? q.cursor ?? null : null,
+      oversizedId,
+      complete: selected.length === candidates.length,
+      guidance: oversizedId ? "This record exceeds the budget. Request fewer fields or explicit export." : void 0
+    };
+  }
+  readiness(t) {
+    const dependencies = t.data.dependencies.filter((key) => {
+      const dep = this.store.get(key);
+      return !dep || this.phase(dep) !== "done";
+    });
+    const owners = this.store.agents().filter((a) => a.state === "working" && a.taskId === t.id);
+    const resources = this.resourceStatus(t.data.resources ?? []);
+    const childrenPending = this.store.all("task").filter((v) => v.data.parentId === t.id && this.phase(v) !== "done").map((v) => v.id);
+    return {
+      ready: this.phase(t) !== "done" && !t.data.blocker && !t.data.waiting && !dependencies.length && !owners.length && !childrenPending.length && resources.every((r) => r.available > 0 && !r.owner),
+      dependencies,
+      childrenPending,
+      blocker: t.data.blocker ?? null,
+      waiting: t.data.waiting ?? null,
+      owners: owners.map((a) => a.agentId),
+      resources,
+      ageSeconds: Math.max(
+        0,
+        Math.floor((Date.now() - Date.parse(t.data.waiting?.since ?? t.updatedAt)) / 1e3)
+      )
+    };
+  }
+  schedule(deliveryId) {
+    const tasks = this.store.all("task").filter((t) => !deliveryId || t.data.deliveryId === deliveryId);
+    const reverse = /* @__PURE__ */ new Map();
+    for (const t of tasks)
+      for (const dep of t.data.dependencies) reverse.set(dep, [...reverse.get(dep) ?? [], t.id]);
+    const reach = (key) => {
+      const seen = /* @__PURE__ */ new Set(), todo = [...reverse.get(key) ?? []];
+      while (todo.length) {
+        const next = todo.pop();
+        if (seen.has(next)) continue;
+        seen.add(next);
+        todo.push(...reverse.get(next) ?? []);
+      }
+      return seen.size;
+    };
+    const ranked = tasks.map((t) => ({
+      id: t.id,
+      title: t.data.title,
+      version: t.version,
+      ...this.readiness(t),
+      downstream: reach(t.id)
+    })).sort(
+      (a, b) => Number(b.ready) - Number(a.ready) || b.downstream - a.downstream || a.id.localeCompare(b.id)
+    );
+    return {
+      advisory: true,
+      dispatch: "Claim explicitly after selecting a ready task and registered workspace. No agents are launched by this API.",
+      capacity: {
+        project: this.store.config.maxAgents,
+        active: this.store.agents().filter((a) => a.state === "working").length,
+        maxTeamsPerDelivery: this.store.config.maxTeamsPerDelivery,
+        nativeCapacity: "Configured in Claude separately; Nexo limits are additional, not a replacement."
+      },
+      tasks: ranked
+    };
+  }
+  resourceStatus(ids) {
+    const cfg = this.config(), active = this.store.agents().filter((a) => a.state === "working");
+    return ids.map((key) => {
+      const resource = cfg.resources.find((r) => r.id === key);
+      const used = active.filter((a) => a.resources?.includes(key)).length;
+      return {
+        id: key,
+        capacity: resource?.capacity ?? 0,
+        used,
+        available: Math.max(0, (resource?.capacity ?? 0) - used),
+        owner: resource?.owner ?? null
+      };
+    });
+  }
+  validateClaim(a) {
+    const task = this.store.get(a.taskId);
+    assert2(
+      !task.data.waiting,
+      "WAITING",
+      "Clear the waiting reason with a versioned command before claiming"
+    );
+    a.resources = [.../* @__PURE__ */ new Set([...task.data.resources ?? [], ...a.resources ?? []])];
+    for (const r of this.resourceStatus(a.resources))
+      if (r.available < 1 || r.owner)
+        throw new NexoError("RESOURCE_BUSY", `Resource ${r.id} is unavailable`, 409, r);
+    if (a.workspaceId) {
+      const w = this.workspace(a.workspaceId);
+      assert2(
+        w && fs5.existsSync(w.path),
+        "WORKSPACE_MISSING",
+        "Register a valid workspace before claiming"
+      );
+      assert2(
+        w.coordination !== "independent",
+        "INDEPENDENT_COORDINATOR",
+        "Use the independent workspace coordinator for this claim"
+      );
+    }
+  }
+  begin(a) {
+    const prior = this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(a.executionId);
+    assert2(!prior, "EXECUTION_EXISTS", "Use a new executionId for a new lease");
+    assert2(
+      !fs5.existsSync(path4.join(this.store.root, ".nexo", "executions", a.executionId + ".json")),
+      "EXECUTION_EXISTS",
+      "This execution ID already belongs to exported project history"
+    );
+    if (a.parentExecutionId)
+      assert2(
+        this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(a.parentExecutionId),
+        "PARENT_EXECUTION_MISSING",
+        "Parent execution does not exist"
+      );
+    const data = {
+      id: a.executionId,
+      taskId: a.taskId,
+      deliveryId: this.store.get(a.taskId).data.deliveryId,
+      parentExecutionId: a.parentExecutionId,
+      agentId: a.agentId,
+      model: a.model,
+      effort: a.effort,
+      fence: a.fence,
+      workspaceId: a.workspaceId,
+      startedAt: a.startedAt,
+      status: "working",
+      resources: a.resources,
+      lastActivity: a.activity
+    };
+    this.store.db.prepare("INSERT INTO executions VALUES(?,?,?)").run(data.id, a.taskId, JSON.stringify(data));
+  }
+  finish(a, status = "released") {
+    if (!a.executionId) return;
+    const row = this.store.db.prepare("SELECT data FROM executions WHERE id=?").get(a.executionId);
+    if (!row) return;
+    const data = {
+      ...JSON.parse(String(row.data)),
+      status: a.state === "lost_contact" ? "lost_contact" : status,
+      finishedAt: Date.now(),
+      result: this.store.get(a.taskId)?.data.result || void 0
+    };
+    this.store.db.prepare("UPDATE executions SET data=? WHERE id=?").run(JSON.stringify(data), a.executionId);
+  }
+  executions(taskId) {
+    const local = (taskId ? this.store.db.prepare("SELECT data FROM executions WHERE task_id=?").all(taskId) : this.store.db.prepare("SELECT data FROM executions").all()).map((r) => JSON.parse(String(r.data))).map((e) => {
+      if (e.status === "working" && !this.store.agents().some((a) => a.executionId === e.id && a.state === "working"))
+        return { ...e, status: "lost_contact" };
+      return e;
+    });
+    const folder = path4.join(this.store.root, ".nexo", "executions");
+    if (!fs5.existsSync(folder)) return local;
+    assert2(
+      !fs5.lstatSync(folder).isSymbolicLink(),
+      "SYMLINK_DENIED",
+      "Execution history cannot be a symlink"
+    );
+    const records = new Map(local.map((e) => [e.id, e]));
+    const names = fs5.readdirSync(folder).filter((name) => /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}\.json$/.test(name));
+    assert2(
+      names.length <= 1e4,
+      "HISTORY_LIMIT",
+      "Execution history exceeds 10,000 summary files"
+    );
+    for (const name of names) {
+      const file2 = path4.join(folder, name);
+      assert2(
+        !fs5.lstatSync(file2).isSymbolicLink() && fs5.statSync(file2).size <= 16384,
+        "HISTORY_LIMIT",
+        "Invalid execution summary"
+      );
+      const e = executionSummarySchema.parse(JSON.parse(fs5.readFileSync(file2, "utf8")));
+      assert2(
+        e.projectId === this.store.config.id && name === e.id + ".json",
+        "PROJECT_MISMATCH",
+        "Execution summary identity mismatch"
+      );
+      if ((!taskId || e.taskId === taskId) && !records.has(e.id))
+        records.set(e.id, { ...e, historical: true });
+    }
+    return [...records.values()];
+  }
+  exportExecutions() {
+    const folder = path4.join(this.store.root, ".nexo", "executions");
+    assert2(
+      !fs5.existsSync(folder) || !fs5.lstatSync(folder).isSymbolicLink(),
+      "SYMLINK_DENIED",
+      "Execution folder cannot be a symlink"
+    );
+    fs5.mkdirSync(folder, { recursive: true });
+    let count = 0;
+    for (const e of this.executions().filter((e2) => e2.status !== "working")) {
+      const safe = {
+        schema: 1,
+        projectId: this.store.config.id,
+        id: e.id,
+        deliveryId: e.deliveryId,
+        taskId: e.taskId,
+        parentExecutionId: e.parentExecutionId,
+        model: e.model,
+        effort: e.effort,
+        startedAt: e.startedAt,
+        finishedAt: e.finishedAt,
+        status: e.status
+      };
+      const file2 = path4.join(folder, e.id + ".json");
+      if (!fs5.existsSync(file2)) {
+        atomicWrite(file2, JSON.stringify(safe, null, 2) + "\n");
+        count++;
+      }
+    }
+    return { exported: count, directory: ".nexo/executions", containsLiveState: false };
+  }
+  workspace(key) {
+    const row = this.store.db.prepare("SELECT data FROM workspaces WHERE id=?").get(key);
+    return row ? JSON.parse(String(row.data)) : void 0;
+  }
+  async registerWorkspace(raw) {
+    const v = workspaceSchema.parse(raw);
+    assert2(
+      v.expectedProjectId === this.store.config.id,
+      "PROJECT_MISMATCH",
+      "Choose the intended coordinator project identity"
+    );
+    const absolute = fs5.realpathSync.native(path4.resolve(this.store.root, v.path));
+    const prior = this.workspace(v.id);
+    if (prior && this.store.agents().some((a) => a.state === "working" && a.workspaceId === v.id))
+      assert2(
+        prior.path === absolute && prior.mode === v.mode && (prior.coordination ?? "shared") === v.coordination,
+        "WORKSPACE_ACTIVE",
+        "Release active workspace claims before changing its path or coordination mode"
+      );
+    const common = async (cwd) => fs5.realpathSync.native(
+      path4.resolve(cwd, await gitRead(cwd, ["rev-parse", "--git-common-dir"]))
+    );
+    const [checkoutCommon, coordinatorCommon] = await Promise.all([
+      common(absolute),
+      common(this.store.root)
+    ]);
+    assert2(
+      checkoutCommon === coordinatorCommon,
+      "REPOSITORY_MISMATCH",
+      "Workspace is not a worktree of this repository"
+    );
+    const localConfig = path4.join(absolute, ".nexo", "project.json");
+    if (absolute !== this.store.root && fs5.existsSync(localConfig)) {
+      const other = JSON.parse(fs5.readFileSync(localConfig, "utf8"));
+      assert2(
+        v.coordination === "independent" || other.id === this.store.config.id,
+        "SPLIT_BOARD",
+        "This worktree has a separate project identity. Choose independent coordination explicitly or use the canonical coordinator."
+      );
+    }
+    assert2(
+      v.mode !== "shared" || absolute === this.store.root,
+      "WORKSPACE_MODE",
+      "Use mode=isolated for a separate Git worktree"
+    );
+    if (v.coordination === "independent")
+      assert2(
+        fs5.existsSync(localConfig) && JSON.parse(fs5.readFileSync(localConfig, "utf8")).id !== this.store.config.id,
+        "INDEPENDENT_BOARD_REQUIRED",
+        "Initialize an independent board with a distinct project identity first. Existing history is never overwritten automatically."
+      );
+    const data = {
+      ...v,
+      path: absolute,
+      canonicalRoot: this.store.root,
+      branch: await gitRead(absolute, ["rev-parse", "--abbrev-ref", "HEAD"]),
+      baseCommit: await gitRead(absolute, ["rev-parse", "HEAD"]),
+      registeredAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.store.db.prepare(
+      "INSERT INTO workspaces VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data"
+    ).run(v.id, JSON.stringify(data));
+    if (absolute !== this.store.root && v.coordination === "shared") {
+      const gitDir = gitDirectory(absolute);
+      atomicWrite(
+        path4.join(gitDir, "nexo-coordinator.json"),
+        JSON.stringify({
+          schema: 1,
+          root: this.store.root,
+          projectId: this.store.config.id,
+          workspaceId: v.id
+        })
+      );
+    }
+    if (absolute !== this.store.root && v.coordination === "independent") {
+      const link = path4.join(gitDirectory(absolute), "nexo-coordinator.json");
+      if (fs5.existsSync(link)) {
+        const prior2 = JSON.parse(fs5.readFileSync(link, "utf8"));
+        assert2(
+          prior2.projectId === this.store.config.id,
+          "COORDINATOR_MISMATCH",
+          "Explicitly unlink the other coordinator first"
+        );
+        fs5.unlinkSync(link);
+      }
+    }
+    return data;
+  }
+  allowedExternal(a, absolute) {
+    return this.config().externalWrites.some((r) => {
+      const configured = path4.resolve(this.store.root, r.path);
+      const relative = path4.relative(configured, absolute);
+      return a.resources?.includes(r.resourceId) && (relative === "" || !relative.startsWith("..") && !path4.isAbsolute(relative));
+    });
+  }
+  checks(t) {
+    return (t.data.evidence ?? []).filter((e) => e.checkId).map((e) => {
+      return {
+        checkId: e.checkId,
+        ...this.verification.get(this.evidenceKey(e)) ?? {
+          status: "UNVERIFIED",
+          reason: "Refresh verification to inspect current source"
+        }
+      };
+    });
+  }
+  evidenceKey(e) {
+    return digest(
+      JSON.stringify([e.repoId, e.checkId, e.commit, e.runId, e.fingerprint, e.scope, e.status])
+    );
+  }
+  async refreshChecks(taskId) {
+    const records = /* @__PURE__ */ new Map();
+    for (const task of this.store.all("task").filter((t) => !taskId || t.id === taskId))
+      for (const e of task.data.evidence ?? []) if (e.checkId) records.set(this.evidenceKey(e), e);
+    const queue = [...records.values()];
+    await Promise.all(
+      Array.from({ length: Math.min(4, queue.length) }, async () => {
+        while (queue.length) {
+          const e = queue.shift();
+          try {
+            const value = await this.verifyEvidence(e);
+            this.verification.set(this.evidenceKey(e), {
+              ...value,
+              verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+            });
+          } catch (error62) {
+            this.verification.set(this.evidenceKey(e), {
+              status: "STALE",
+              reason: error62.message,
+              verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+            });
+          }
+        }
+      })
+    );
+  }
+  async verifyEvidence(e) {
+    const cfg = this.config(), check2 = cfg.checks.find((c) => c.id === e.checkId), repo = cfg.repositories.find((r) => r.id === e.repoId);
+    assert2(
+      check2 && repo && check2.repoId === repo.id,
+      "CHECK_NOT_CONFIGURED",
+      "Check and repository must be explicitly configured in .nexo/coordination.json"
+    );
+    assert2(
+      e.scope === "integrated" && e.status === "PASS" && e.commit && e.runId && e.fingerprint,
+      "CHECK_NOT_PASS",
+      "Integrated PASS evidence with commit, runId and fingerprint required"
+    );
+    const root = fs5.realpathSync.native(path4.resolve(this.store.root, repo.path));
+    const git = (args) => gitRead(root, args);
+    assert2(
+      /^[a-f0-9]{40,64}$/.test(e.commit),
+      "FULL_COMMIT_REQUIRED",
+      "Verified checks require a full commit ID"
+    );
+    assert2(
+      await git(["rev-parse", "--verify", `${e.commit}^{commit}`]) === e.commit,
+      "COMMIT_MISSING",
+      "Commit does not exist in the configured repository"
+    );
+    assert2(
+      await git(["rev-parse", "--verify", `${repo.integratedRef}^{commit}`]) === e.commit,
+      "STALE_CHECK",
+      "Evidence does not match the current integrated ref"
+    );
+    assert2(
+      !await git(["status", "--porcelain", "--untracked-files=no"]),
+      "DIRTY_INTEGRATION",
+      "Integrated repository has tracked changes"
+    );
+    const artifact = path4.resolve(root, check2.artifact), relative = path4.relative(root, artifact);
+    assert2(
+      relative && !relative.startsWith("..") && !path4.isAbsolute(relative),
+      "ARTIFACT_SCOPE",
+      "Configured artifact must be inside its repository"
+    );
+    const real = fs5.realpathSync.native(artifact);
+    assert2(
+      real === artifact && fs5.statSync(real).size <= 1048576,
+      "ARTIFACT_SCOPE",
+      "Artifact must be a regular, bounded file without symlink traversal"
+    );
+    const bytes = fs5.readFileSync(real);
+    assert2(digest(bytes) === e.fingerprint, "FINGERPRINT_MISMATCH", "Check artifact changed");
+    assert2(
+      this.store.db.prepare("SELECT id FROM check_runs WHERE id=? AND fingerprint=?").get(e.runId, e.fingerprint),
+      "UNATTESTED_CHECK",
+      "This coordinator did not run this check. Run the explicitly configured trusted adapter; a self-reported PASS is insufficient."
+    );
+    const result = JSON.parse(bytes.toString("utf8"));
+    assert2(
+      result.repoId === e.repoId && result.commit === e.commit && result.checkId === e.checkId && result.runId === e.runId && result.status === "PASS" && result.adapterFingerprint === digest(JSON.stringify(check2)),
+      "CHECK_MISMATCH",
+      "Artifact identity/result does not match evidence"
+    );
+    return { status: "PASS", commit: e.commit, runId: e.runId, fingerprint: e.fingerprint };
+  }
+  async runCheck(raw) {
+    const input2 = runCheckSchema.parse(raw), cfg = this.config(), check2 = cfg.checks.find((v) => v.id === input2.checkId);
+    assert2(check2, "CHECK_NOT_CONFIGURED", "Configure the check before running it");
+    const slots = [[`check:${check2.repoId}:${check2.id}`, 1]];
+    if (check2.resourceId)
+      slots.push([
+        `resource:${check2.resourceId}`,
+        cfg.resources.find((v) => v.id === check2.resourceId)?.capacity ?? 0
+      ]);
+    for (const [key, capacity] of slots)
+      assert2(
+        (this.runningChecks.get(key) ?? 0) < capacity,
+        "CHECK_BUSY",
+        "A check already occupies this configured check/resource slot"
+      );
+    for (const [key] of slots) this.runningChecks.set(key, (this.runningChecks.get(key) ?? 0) + 1);
+    try {
+      return await this.performCheck(input2);
+    } finally {
+      for (const [key] of slots) {
+        const n = (this.runningChecks.get(key) ?? 1) - 1;
+        if (n) this.runningChecks.set(key, n);
+        else this.runningChecks.delete(key);
+      }
+    }
+  }
+  async performCheck(raw) {
+    const input2 = runCheckSchema.parse(raw), cfg = this.config();
+    const check2 = cfg.checks.find((c) => c.id === input2.checkId), repo = cfg.repositories.find((r) => r.id === check2?.repoId);
+    assert2(
+      check2?.executable && repo,
+      "CHECK_NOT_CONFIGURED",
+      "Configure a trusted executable and fixed arguments before running checks. Gate prose is never executed."
+    );
+    const actor = this.store.agents().find((a) => a.token === input2.token && a.taskId === input2.taskId && a.state === "working");
+    assert2(actor, "STALE_LEASE", "Active task ownership is required");
+    if (check2.resourceId)
+      assert2(
+        actor.resources?.includes(check2.resourceId),
+        "RESOURCE_REQUIRED",
+        "Claim the check resource before running"
+      );
+    const root = fs5.realpathSync.native(path4.resolve(this.store.root, repo.path));
+    const git = (args) => gitRead(root, args);
+    const commit = await git(["rev-parse", "--verify", `${repo.integratedRef}^{commit}`]);
+    assert2(
+      !await git(["status", "--porcelain", "--untracked-files=no"]),
+      "DIRTY_INTEGRATION",
+      "Commit tracked changes before integrated checks"
+    );
+    const artifact = path4.resolve(root, check2.artifact), relative = path4.relative(root, artifact).replaceAll("\\", "/");
+    assert2(
+      relative.startsWith(".nexo/local/checks/") && !relative.split("/").includes(".."),
+      "ARTIFACT_SCOPE",
+      "Trusted check results must be written under .nexo/local/checks/"
+    );
+    const folder = path4.dirname(artifact);
+    for (let p = folder; p !== path4.dirname(p); p = path4.dirname(p))
+      if (fs5.existsSync(p))
+        assert2(
+          !fs5.lstatSync(p).isSymbolicLink(),
+          "SYMLINK_DENIED",
+          "Check artifact ancestors cannot be symlinks"
+        );
+    fs5.mkdirSync(folder, { recursive: true });
+    assert2(
+      fs5.realpathSync.native(folder) === folder && (!fs5.existsSync(artifact) || !fs5.lstatSync(artifact).isSymbolicLink()),
+      "SYMLINK_DENIED",
+      "Check artifacts cannot traverse symlinks"
+    );
+    const runId = crypto2.randomUUID(), startedAt = Date.now();
+    const code = await new Promise((resolve, reject) => {
+      const child = spawn(check2.executable, check2.args, {
+        cwd: root,
+        windowsHide: true,
+        stdio: "ignore",
+        shell: false
+      });
+      const timeout = setTimeout(() => {
+        child.kill();
+      }, check2.timeoutSeconds * 1e3);
+      const renew = setInterval(() => {
+        try {
+          this.store.heartbeat(input2.token, `Verifying ${check2.id}`);
+        } catch {
+          child.kill();
+        }
+      }, 15e3);
+      child.once("error", (error62) => {
+        clearTimeout(timeout);
+        clearInterval(renew);
+        reject(error62);
+      });
+      child.once("exit", (value) => {
+        clearTimeout(timeout);
+        clearInterval(renew);
+        resolve(value);
+      });
+    });
+    const stillOwned = this.store.agents().some((a) => a.token === input2.token && a.state === "working");
+    const same = commit === await git(["rev-parse", "--verify", `${repo.integratedRef}^{commit}`]) && !await git(["status", "--porcelain", "--untracked-files=no"]);
+    const status = !stillOwned || !same ? "STALE" : code === 0 ? "PASS" : "FAIL";
+    const record2 = {
+      schema: 1,
+      repoId: repo.id,
+      commit,
+      checkId: check2.id,
+      runId,
+      status,
+      startedAt,
+      finishedAt: Date.now(),
+      exitCode: code,
+      adapterFingerprint: digest(JSON.stringify(check2))
+    };
+    const bytes = JSON.stringify(record2, null, 2) + "\n";
+    atomicWrite(artifact, bytes);
+    const fingerprint = digest(bytes);
+    this.store.db.prepare("INSERT INTO check_runs VALUES(?,?)").run(runId, fingerprint);
+    return {
+      label: `Trusted check ${check2.id}`,
+      repoId: repo.id,
+      commit,
+      checkId: check2.id,
+      runId,
+      status,
+      fingerprint,
+      scope: "integrated",
+      artifact: relative
+    };
+  }
+  async prepareCommands(raw) {
+    const commands = raw.map((v) => commandSchema.parse(v)).filter(
+      (c) => !this.store.db.prepare("SELECT id FROM events WHERE command_id=?").get(c.commandId)
+    );
+    if (!commands.length) return;
+    const policy = digest(JSON.stringify(this.config()));
+    const deliveries = new Map(this.store.all("delivery").map((e) => [e.id, e.data]));
+    const tasks = new Map(this.store.all("task").map((e) => [e.id, e.data]));
+    for (const c of commands) {
+      if (c.kind === "delivery") deliveries.set(c.id, { ...deliveries.get(c.id), ...c.data });
+      if (c.kind === "task") tasks.set(c.id, { ...tasks.get(c.id), ...c.data });
+    }
+    const evidence = /* @__PURE__ */ new Map();
+    for (const c of commands) {
+      const candidates = c.kind === "task" ? [tasks.get(c.id)] : c.kind === "delivery" && c.op === "accept" ? [...tasks.values()].filter((t) => t.deliveryId === c.id) : [];
+      for (const t of candidates) {
+        const d = deliveries.get(t?.deliveryId);
+        if (!d || d.workflow?.find((s) => s.id === t.stageId)?.phase !== "done" || t.workType === "research")
+          continue;
+        for (const key of [
+          ...new Set((d.workflow ?? []).flatMap((s) => s.checks ?? []))
+        ]) {
+          const e = t.evidence?.find((v) => v.checkId === key);
+          assert2(e, "CHECK_REQUIRED", `Missing evidence for ${key}`);
+          evidence.set(this.evidenceKey(e), e);
+        }
+      }
+    }
+    for (const e of evidence.values()) await this.verifyEvidence(e);
+    assert2(
+      policy === digest(JSON.stringify(this.config())),
+      "CHECK_POLICY_CHANGED",
+      "Check policy changed during verification; retry"
+    );
+    for (const c of commands)
+      this.prepared.set(c.commandId, {
+        hash: digest(JSON.stringify(c)),
+        at: Date.now(),
+        policy,
+        evidence: new Set(evidence.keys())
+      });
+    for (const [key, v] of this.prepared) if (v.at < Date.now() - 3e4) this.prepared.delete(key);
+  }
+  verifyCompletion(t, raw) {
+    if (t.data.workType === "research") {
+      assert2(
+        t.data.evidence.some((e) => e.scope === "research"),
+        "RESEARCH_EVIDENCE_REQUIRED",
+        "Research tasks require explicitly labeled research evidence"
+      );
+      return;
+    }
+    const delivery = this.store.get(t.data.deliveryId);
+    const required2 = [
+      ...new Set(delivery.data.workflow.flatMap((s) => s.checks ?? []))
+    ];
+    for (const key of required2) {
+      const evidence = t.data.evidence.find((e) => e.checkId === key);
+      assert2(evidence, "CHECK_REQUIRED", `Missing evidence for ${key}`);
+      const command = commandSchema.parse(raw), prepared = this.prepared.get(command.commandId);
+      assert2(
+        prepared && prepared.hash === digest(JSON.stringify(command)) && prepared.at > Date.now() - 3e4 && prepared.policy === digest(JSON.stringify(this.config())) && prepared.evidence.has(this.evidenceKey(evidence)),
+        "CHECK_PREFLIGHT_REQUIRED",
+        "Verify this exact command and policy asynchronously before completion"
+      );
+    }
+  }
+  batch(raw) {
+    const b = batchSchema.parse(raw), fingerprint = digest(JSON.stringify(b.commands));
+    const previous = this.store.db.prepare("SELECT * FROM import_jobs WHERE id=?").get(b.jobId);
+    if (previous) {
+      assert2(
+        previous.fingerprint === fingerprint,
+        "IDEMPOTENCY_MISMATCH",
+        "Import job ID reused with different commands"
+      );
+      return { ...JSON.parse(String(previous.result)), duplicate: true };
+    }
+    const result = this.store.executeBatch(b.commands, b.preview);
+    const summary = {
+      jobId: b.jobId,
+      preview: b.preview,
+      fingerprint,
+      count: result.length,
+      entities: result.map((v) => ({ id: v.entity.id, version: v.entity.version })),
+      nextStep: b.preview ? "Review the preview and resubmit the same commands with preview=false." : "Continue the next bounded batch with a different jobId."
+    };
+    if (!b.preview)
+      this.store.db.prepare("INSERT INTO import_jobs VALUES(?,?,?)").run(b.jobId, fingerprint, JSON.stringify(summary));
+    return summary;
+  }
+  reconcile(adapterId) {
+    const adapter = this.config().adapters.find((v) => v.id === adapterId);
+    assert2(adapter, "ADAPTER_MISSING", "Configure this manifest adapter explicitly");
+    const file2 = path4.resolve(this.store.root, adapter.path), relative = path4.relative(this.store.root, file2);
+    assert2(
+      !relative.startsWith("..") && !path4.isAbsolute(relative) && fs5.realpathSync.native(file2) === file2 && fs5.statSync(file2).size <= 10485760,
+      "ADAPTER_SCOPE",
+      "Manifest must be a bounded file inside this project without symlinks"
+    );
+    const bytes = fs5.readFileSync(file2), raw = JSON.parse(bytes.toString("utf8"));
+    const tasks = external_exports.array(
+      external_exports.object({ id: external_exports.string().min(1).max(200), status: external_exports.string().max(100) }).passthrough()
+    ).max(1e4).parse(Array.isArray(raw) ? raw : raw.tasks);
+    assert2(
+      new Set(tasks.map((t) => t.id)).size === tasks.length,
+      "DUPLICATE_SOURCE_ID",
+      "Manifest has duplicate task IDs"
+    );
+    const records = this.store.all("task").filter((t) => t.data.source?.adapter === adapterId);
+    const differences = tasks.flatMap((source) => {
+      const matches = records.filter((t2) => t2.data.source.id === source.id);
+      const t = matches[0];
+      const target = adapter.stageMap[source.status];
+      return !t || matches.length > 1 || !target || t.data.stageId !== target ? [
+        {
+          sourceId: source.id,
+          sourceStatus: source.status,
+          taskId: t?.id,
+          expectedVersion: t?.version,
+          targetStage: target ?? null,
+          reason: !t ? "missing-card" : matches.length > 1 ? "ambiguous-source" : !target ? "unmapped-status" : "stage-mismatch"
+        }
+      ] : [];
+    });
+    return {
+      adapterId,
+      fingerprint: digest(bytes),
+      authority: "Manifest defines source checks; Nexo owns coordination. This report never writes either source.",
+      differences,
+      missingFromManifest: records.filter((t) => !tasks.some((v) => v.id === t.data.source.id)).map((t) => t.id),
+      nextStep: "Review differences. Apply explicitly approved versioned commands through batch preview; no automatic overwrites."
+    };
+  }
+  usage(raw) {
+    const sample = usageSchema.parse(raw);
+    assert2(
+      this.config().telemetry,
+      "TELEMETRY_DISABLED",
+      "Opt in with telemetry=true in coordination.json"
+    );
+    assert2(
+      this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(sample.executionId),
+      "EXECUTION_MISSING",
+      "Unknown execution"
+    );
+    const value = JSON.stringify(sample), prior = this.store.db.prepare("SELECT data FROM usage_samples WHERE id=?").get(sample.id);
+    assert2(
+      !prior || prior.data === value,
+      "IDEMPOTENCY_MISMATCH",
+      "Usage ID reused with different content"
+    );
+    this.store.db.prepare("INSERT OR IGNORE INTO usage_samples VALUES(?,?)").run(sample.id, value);
+    return { recorded: true, duplicate: !!prior, localOnly: true };
+  }
+  observe(key, bytes, latency) {
+    this.store.db.prepare(
+      "INSERT INTO coordination_metrics VALUES(?,1,?,?) ON CONFLICT(key) DO UPDATE SET count=count+1,bytes=bytes+excluded.bytes,latency_ms=latency_ms+excluded.latency_ms"
+    ).run(key.slice(0, 120), bytes, latency);
+  }
+  clearTelemetry() {
+    this.store.transaction(() => {
+      this.store.db.exec("DELETE FROM usage_samples; DELETE FROM coordination_metrics;");
+    });
+    return { cleared: true, localOnly: true };
+  }
+  diagnostics() {
+    const s = this.store, cfg = this.config();
+    const workspaces = s.db.prepare("SELECT data FROM workspaces").all().map((r) => JSON.parse(String(r.data)));
+    const usage = cfg.telemetry ? s.db.prepare("SELECT data FROM usage_samples").all().map((r) => JSON.parse(String(r.data))) : [];
+    const totals = usage.reduce(
+      (a, v) => {
+        for (const key of ["input", "cacheRead", "cacheWrite", "output"]) a[key] += v[key];
+        a.samples++;
+        a.estimates += Number(v.source === "estimate");
+        return a;
+      },
+      { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, samples: 0, estimates: 0 }
+    );
+    const bySource = ["provider", "estimate"].map((source) => ({
+      source,
+      ...usage.filter((v) => v.source === source).reduce(
+        (a, v) => {
+          for (const key of ["input", "cacheRead", "cacheWrite", "output"]) a[key] += v[key];
+          return a;
+        },
+        { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 }
+      )
+    }));
+    const groups = /* @__PURE__ */ new Map();
+    for (const sample of usage) {
+      const e = this.executions().find((v) => v.id === sample.executionId);
+      const key = [
+        e?.deliveryId,
+        sample.executionId,
+        e?.model ?? "unknown",
+        sample.category,
+        sample.source
+      ].join(":");
+      const g = groups.get(key) ?? {
+        deliveryId: e?.deliveryId,
+        executionId: sample.executionId,
+        model: e?.model,
+        effort: e?.effort,
+        category: sample.category,
+        source: sample.source,
+        input: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        output: 0,
+        responseBytes: 0,
+        latencyMs: 0,
+        samples: 0
+      };
+      for (const field of [
+        "input",
+        "cacheRead",
+        "cacheWrite",
+        "output",
+        "responseBytes",
+        "latencyMs"
+      ])
+        g[field] += sample[field] ?? 0;
+      g.samples++;
+      groups.set(key, g);
+    }
+    const tasks = s.all("task"), checks = tasks.flatMap(
+      (t) => this.checks(t).map((check2) => ({ taskId: t.id, ...check2 }))
+    );
+    return {
+      canonicalRoot: s.root,
+      projectId: s.config.id,
+      snapshot: s.snapshots.state(),
+      conflicts: s.conflicts().length,
+      workspaces: workspaces.map((w) => ({ ...w, missing: !fs5.existsSync(w.path) })),
+      staleAssignments: s.agents().filter((a) => a.state !== "working").map((a) => this.publicAgent(a)),
+      resources: this.resourceStatus(cfg.resources.map((r) => r.id)),
+      checks,
+      waiting: tasks.filter((t) => t.data.waiting).map((t) => ({ id: t.id, ...this.readiness(t) })),
+      acceptance: s.all("delivery").map((d) => {
+        const children = tasks.filter((t) => t.data.deliveryId === d.id);
+        const pending = children.filter((t) => this.phase(t) !== "done").length;
+        return {
+          id: d.id,
+          pending,
+          ready: children.length > 0 && pending === 0 && !checks.some((c) => children.some((t) => t.id === c.taskId) && c.status !== "PASS")
+        };
+      }),
+      telemetry: {
+        enabled: cfg.telemetry,
+        localOnly: true,
+        totals,
+        bySource,
+        groups: [...groups.values()],
+        billing: "No cost inferred. Provider usage and estimates remain labeled separately."
+      },
+      coordinationMetrics: cfg.telemetry ? s.db.prepare("SELECT * FROM coordination_metrics ORDER BY key").all() : [],
+      modelGuidance: "Use focused context and explicit checkpoints first. Choose models per task complexity; no automatic model downgrade."
+    };
+  }
+  deduplicateHook(key) {
+    const hash3 = digest(key);
+    const now = Date.now();
+    this.store.db.prepare("DELETE FROM hook_seen WHERE at<?").run(now - 36e5);
+    return Number(
+      this.store.db.prepare("INSERT OR IGNORE INTO hook_seen VALUES(?,?)").run(hash3, now).changes
+    ) === 0;
+  }
+};
+
 // src/store.ts
 var schema = `PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -20138,7 +21370,7 @@ CREATE TABLE IF NOT EXISTS agents(agent_id TEXT PRIMARY KEY,task_id TEXT NOT NUL
 CREATE INDEX IF NOT EXISTS agent_task ON agents(task_id,expires_at);
 CREATE TABLE IF NOT EXISTS fences(task_id TEXT PRIMARY KEY,value INTEGER NOT NULL);
 CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(id UNINDEXED,title,description,tokenize='unicode61');`;
-var hash2 = (e) => crypto2.createHash("sha256").update(JSON.stringify(e)).digest("hex");
+var hash2 = (e) => crypto3.createHash("sha256").update(JSON.stringify(e)).digest("hex");
 var parse3 = (r) => ({
   kind: r.kind,
   id: r.id,
@@ -20155,9 +21387,11 @@ var Store = class {
     this.eventsDir = safeEventsDir(root);
     this.releaseWriter = acquireWriter(root);
     try {
-      this.db = new DatabaseSync2(path4.join(this.dir, "state.sqlite"), { timeout: 5e3 });
+      this.db = new DatabaseSync2(path5.join(this.dir, "state.sqlite"), { timeout: 5e3 });
       this.db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
       this.db.exec(schema);
+      this.db.exec(coordinationTables);
+      this.coordination = new Coordination(this);
       const version2 = this.db.prepare("SELECT value FROM meta WHERE key=?").get("schema");
       assert2(
         !version2 || version2.value === "1",
@@ -20166,7 +21400,7 @@ var Store = class {
       );
       this.db.prepare("INSERT OR IGNORE INTO meta VALUES(?,?)").run("schema", "1");
       this.snapshots = new Snapshots(
-        path4.join(root, ".nexo", "project.sqlite"),
+        path5.join(root, ".nexo", "project.sqlite"),
         () => this.stageSnapshot()
       );
       this.exportEvents();
@@ -20191,6 +21425,13 @@ var Store = class {
   dir;
   eventsDir;
   revision = 0;
+  durableRevision = 0;
+  changeFloor = 0;
+  changeLog = /* @__PURE__ */ new Map();
+  versions = /* @__PURE__ */ new Map();
+  transactionDepth = 0;
+  batching = false;
+  coordination;
   onChange = (_durable) => {
   };
   snapshots;
@@ -20220,19 +21461,46 @@ var Store = class {
     return this.db.prepare("SELECT * FROM conflicts WHERE event_id NOT IN (SELECT event_id FROM resolutions)").all();
   }
   transaction(fn) {
-    this.db.exec("BEGIN IMMEDIATE");
+    const depth = this.transactionDepth;
+    const nested = depth > 0;
+    const name = `nexo_${depth + 1}`;
+    this.db.exec(nested ? `SAVEPOINT ${name}` : "BEGIN IMMEDIATE");
+    this.transactionDepth = depth + 1;
     try {
       const value = fn();
-      this.db.exec("COMMIT");
+      this.db.exec(nested ? `RELEASE ${name}` : "COMMIT");
       return value;
     } catch (e) {
-      this.db.exec("ROLLBACK");
+      this.db.exec(nested ? `ROLLBACK TO ${name}` : "ROLLBACK");
+      if (nested) this.db.exec(`RELEASE ${name}`);
       throw e;
+    } finally {
+      this.transactionDepth = depth;
     }
   }
   changed(durable = true) {
+    if (this.batching) return;
     this.revision++;
-    if (durable) this.snapshots.markDirty();
+    if (durable) {
+      this.durableRevision++;
+      const current = this.all();
+      const ids = new Set(current.map((e) => e.id));
+      if ([...this.versions.keys()].some((key) => !ids.has(key))) {
+        this.changeFloor = this.durableRevision;
+        this.changeLog.clear();
+        this.versions.clear();
+      }
+      for (const e of current) {
+        const stamp = crypto3.createHash("sha256").update(JSON.stringify([e.version, e.updatedAt, e.data])).digest("hex");
+        if (this.versions.get(e.id) !== stamp) this.changeLog.set(e.id, this.durableRevision);
+        this.versions.set(e.id, stamp);
+      }
+      if (this.changeLog.size > 1e4) {
+        this.changeFloor = this.durableRevision;
+        this.changeLog.clear();
+      }
+      this.snapshots.markDirty();
+    }
     this.onChange(durable);
   }
   validate(command) {
@@ -20410,6 +21678,7 @@ var Store = class {
           );
         }
         if (phase === "done") {
+          assert2(!data.waiting, "WAITING", "Resolve the waiting reason before completion");
           assert2(
             childData(data.id).every(isDone),
             "CHILDREN_PENDING",
@@ -20421,7 +21690,7 @@ var Store = class {
             "Completion requires a result and evidence"
           );
           const gates = delivery.data.workflow.filter((s) => s.gate);
-          if (gates.length)
+          if (gates.length && data.workType !== "research")
             assert2(
               data.evidence.some((e) => e.commit),
               "COMMIT_REQUIRED",
@@ -20460,7 +21729,7 @@ var Store = class {
   }
   execute(raw) {
     const command = commandSchema.parse(raw);
-    this.sync(false);
+    if (!this.batching) this.sync(false);
     assert2(
       !this.conflicts().length,
       "MERGE_CONFLICT",
@@ -20475,8 +21744,30 @@ var Store = class {
         "IDEMPOTENCY_MISMATCH",
         "commandId reused with different content"
       );
-      this.exportEvents();
+      if (!this.batching) this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
+    }
+    if (command.kind === "task" && Array.isArray(command.data.evidence)) {
+      const fields = /* @__PURE__ */ new Set([
+        "label",
+        "url",
+        "commit",
+        "repoId",
+        "checkId",
+        "runId",
+        "fingerprint",
+        "status",
+        "scope",
+        "artifact"
+      ]);
+      for (const evidence of command.data.evidence)
+        if (evidence && typeof evidence === "object")
+          assert2(
+            Object.keys(evidence).every((key) => fields.has(key)),
+            "INVALID_EVIDENCE_FIELDS",
+            "Evidence contains unsupported fields; keep lease credentials only in runtime context",
+            400
+          );
     }
     const result = this.transaction(() => {
       const claims = this.agents().filter(
@@ -20519,6 +21810,14 @@ var Store = class {
           );
       }
       const { leaseToken: _, ...clean } = command;
+      if (command.kind === "task") {
+        const next = this.validate(command);
+        if (this.coordination.phase(next) === "done")
+          this.coordination.verifyCompletion(next, command);
+      }
+      if (command.kind === "delivery" && command.op === "accept")
+        for (const task of this.all("task").filter((t) => t.data.deliveryId === command.id))
+          this.coordination.verifyCompletion(task, command);
       const parents = JSON.parse(
         String(
           this.db.prepare("SELECT value FROM meta WHERE key=?").get("frontier")?.value ?? "[]"
@@ -20527,7 +21826,7 @@ var Store = class {
       const body = {
         schema: 1,
         projectId: this.config.id,
-        id: crypto2.randomUUID(),
+        id: crypto3.randomUUID(),
         parents,
         at: (/* @__PURE__ */ new Date()).toISOString(),
         command: clean
@@ -20539,22 +21838,47 @@ var Store = class {
       if (command.kind === "task") {
         const d = this.get(entity.data.deliveryId);
         if (d?.data.workflow.find((s) => s.id === entity.data.stageId)?.phase === "done")
-          this.db.prepare("DELETE FROM agents WHERE task_id=?").run(command.id);
+          for (const a of this.agents().filter((a2) => a2.taskId === command.id)) {
+            this.coordination.finish(a, "completed");
+            this.db.prepare("DELETE FROM agents WHERE token=?").run(a.token);
+          }
       }
       return { entity, eventId: event.id, duplicate: false };
     });
     this.changed();
-    this.exportEvents();
+    if (!this.batching) this.exportEvents();
     return result;
+  }
+  executeBatch(commands, preview = true) {
+    this.sync(false);
+    assert2(!this.batching, "BATCH_ACTIVE", "Nested batches are not supported");
+    const rollback = new Error("preview");
+    let results = [];
+    this.batching = true;
+    try {
+      this.transaction(() => {
+        results = commands.map((command) => this.execute(command));
+        if (preview) throw rollback;
+      });
+    } catch (error62) {
+      if (error62 !== rollback) throw error62;
+    } finally {
+      this.batching = false;
+    }
+    if (!preview) {
+      this.changed();
+      this.exportEvents();
+    }
+    return results;
   }
   exportEvents() {
     let wrote = false;
     for (const row of this.db.prepare("SELECT event FROM events WHERE exported=0").all()) {
       const event = JSON.parse(row.event);
-      const name = event.id + ".json", file2 = path4.join(this.eventsDir, name);
-      if (!fs5.existsSync(file2)) {
+      const name = event.id + ".json", file2 = path5.join(this.eventsDir, name);
+      if (!fs6.existsSync(file2)) {
         atomicWrite(file2, JSON.stringify(event, null, 2) + "\n");
-        const stat = fs5.lstatSync(file2);
+        const stat = fs6.lstatSync(file2);
         this.fileCache.set(name, {
           stamp: stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size,
           event
@@ -20563,25 +21887,25 @@ var Store = class {
       this.db.prepare("UPDATE events SET exported=1 WHERE id=?").run(event.id);
       wrote = true;
     }
-    if (wrote) this.directoryStamp = String(fs5.statSync(this.eventsDir).mtimeMs);
+    if (wrote) this.directoryStamp = String(fs6.statSync(this.eventsDir).mtimeMs);
   }
   sync(force = true) {
     this.exportEvents();
-    const directoryStamp = String(fs5.statSync(this.eventsDir).mtimeMs);
+    const directoryStamp = String(fs6.statSync(this.eventsDir).mtimeMs);
     if (!force && directoryStamp === this.directoryStamp) return false;
     const existing = new Map(this.events().map((e) => [e.id, e]));
     const known = /* @__PURE__ */ new Map();
     let dirty = false;
-    for (const name of fs5.readdirSync(this.eventsDir)) {
+    for (const name of fs6.readdirSync(this.eventsDir)) {
       if (!/^[0-9a-f-]{36}\.json$/.test(name)) continue;
-      const file2 = path4.join(this.eventsDir, name), stat = fs5.lstatSync(file2);
+      const file2 = path5.join(this.eventsDir, name), stat = fs6.lstatSync(file2);
       assert2(
         stat.isFile() && !stat.isSymbolicLink() && stat.size < 1024 * 1024,
         "INVALID_EVENT",
         "Invalid event file"
       );
       const stamp = stat.mtimeMs + ":" + stat.ctimeMs + ":" + stat.size, cached2 = this.fileCache.get(name);
-      const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs5.readFileSync(file2, "utf8"));
+      const event = cached2?.stamp === stamp ? cached2.event : JSON.parse(fs6.readFileSync(file2, "utf8"));
       const { hash: sum, ...body } = event;
       assert2(
         event.id + ".json" === name && event.schema === 1 && event.projectId === this.config.id && Array.isArray(event.parents) && event.parents.every((p) => typeof p === "string") && hash2(body) === sum,
@@ -20653,8 +21977,8 @@ var Store = class {
     return true;
   }
   resolve(eventIds) {
-    const file2 = path4.join(this.root, ".nexo", "resolutions.json");
-    const previous = fs5.existsSync(file2) ? JSON.parse(fs5.readFileSync(file2, "utf8")) : [];
+    const file2 = path5.join(this.root, ".nexo", "resolutions.json");
+    const previous = fs6.existsSync(file2) ? JSON.parse(fs6.readFileSync(file2, "utf8")) : [];
     const valid = new Set(
       this.db.prepare("SELECT event_id FROM conflicts").all().map((r) => r.event_id)
     );
@@ -20670,9 +21994,9 @@ var Store = class {
     this.readResolutions();
   }
   readResolutions() {
-    const file2 = path4.join(this.root, ".nexo", "resolutions.json");
-    if (fs5.existsSync(file2)) {
-      const ids = JSON.parse(fs5.readFileSync(file2, "utf8"));
+    const file2 = path5.join(this.root, ".nexo", "resolutions.json");
+    if (fs6.existsSync(file2)) {
+      const ids = JSON.parse(fs6.readFileSync(file2, "utf8"));
       assert2(
         Array.isArray(ids) && ids.every((id2) => typeof id2 === "string" && /^[0-9a-f-]{36}$/.test(id2)),
         "INVALID_RESOLUTION",
@@ -20694,7 +22018,7 @@ var Store = class {
   }
   stageSnapshot() {
     this.exportEvents();
-    const temp = path4.join(this.dir, "snapshot-v2-" + crypto2.randomUUID() + ".sqlite");
+    const temp = path5.join(this.dir, "snapshot-v2-" + crypto3.randomUUID() + ".sqlite");
     const target = new DatabaseSync2(temp);
     let reading = false;
     try {
@@ -20723,7 +22047,7 @@ var Store = class {
     } catch (e) {
       target.close();
       try {
-        fs5.rmSync(temp, { force: true });
+        fs6.rmSync(temp, { force: true });
       } catch {
       }
       throw e;
@@ -20732,16 +22056,16 @@ var Store = class {
     }
     target.close();
     try {
-      const fd = fs5.openSync(temp, "r+");
+      const fd = fs6.openSync(temp, "r+");
       try {
-        fs5.fsyncSync(fd);
+        fs6.fsyncSync(fd);
       } finally {
-        fs5.closeSync(fd);
+        fs6.closeSync(fd);
       }
       return temp;
     } catch (e) {
       try {
-        fs5.rmSync(temp, { force: true });
+        fs6.rmSync(temp, { force: true });
       } catch {
       }
       throw e;
@@ -20759,8 +22083,30 @@ var Store = class {
   }
   claim(raw) {
     const claim2 = claimSchema.parse(raw);
+    claim2.scopes = [...new Set(claim2.scopes.map(normalizeScope))].sort();
     this.sync(false);
     assert2(!this.conflicts().length, "MERGE_CONFLICT", "Resolve conflicts before starting work");
+    const existing = this.agents().find(
+      (a) => a.agentId === claim2.agentId && a.state === "working"
+    );
+    if (existing) {
+      const resources = [
+        .../* @__PURE__ */ new Set([...this.get(claim2.taskId)?.data.resources ?? [], ...claim2.resources])
+      ].sort();
+      const same = existing.taskId === claim2.taskId && existing.sessionId === claim2.sessionId && existing.role === claim2.role && existing.teamId === claim2.teamId && existing.workspaceId === claim2.workspaceId && JSON.stringify([...existing.scopes].sort()) === JSON.stringify(claim2.scopes) && JSON.stringify([...existing.resources ?? []].sort()) === JSON.stringify(resources) && (!claim2.executionId || claim2.executionId === existing.executionId);
+      if (same) return { ...existing, duplicate: true };
+      throw new NexoError(
+        "AGENT_ACTIVE",
+        "Agent owns another execution or scope; recover its assignment, checkpoint and release before switching.",
+        409,
+        {
+          taskId: existing.taskId,
+          executionId: existing.executionId,
+          expiresAt: existing.expiresAt,
+          fence: existing.fence
+        }
+      );
+    }
     const agent = this.transaction(() => {
       const task = this.get(claim2.taskId);
       assert2(task?.kind === "task", "INVALID_TASK", "Card not found");
@@ -20786,6 +22132,7 @@ var Store = class {
         "Agent already registered; use heartbeat"
       );
       const active = this.agents().filter((a) => a.state === "working");
+      this.coordination.validateClaim(claim2);
       assert2(active.length < this.config.maxAgents, "CAPACITY", "Project capacity reached");
       if (claim2.teamId) {
         const team = this.get(claim2.teamId);
@@ -20822,7 +22169,9 @@ var Store = class {
       const scopes = claim2.scopes.map(normalizeScope);
       claim2.scopes = scopes;
       if (claim2.role !== "reviewer")
-        for (const a of active.filter((a2) => a2.role !== "reviewer"))
+        for (const a of active.filter(
+          (a2) => a2.role !== "reviewer" && (a2.workspaceId ? this.coordination.workspace(a2.workspaceId)?.path : this.root) === (claim2.workspaceId ? this.coordination.workspace(claim2.workspaceId)?.path : this.root)
+        ))
           assert2(
             !scopes.some((s) => a.scopes.some((t) => overlap(s, t))),
             "SCOPE_CONFLICT",
@@ -20836,12 +22185,15 @@ var Store = class {
       ).run(claim2.taskId, fence);
       const agent2 = {
         ...claim2,
-        token: crypto2.randomBytes(32).toString("base64url"),
+        executionId: claim2.executionId ?? crypto3.randomUUID(),
+        token: crypto3.randomBytes(32).toString("base64url"),
         fence,
         startedAt: Date.now(),
         expiresAt: Date.now() + claim2.ttlSeconds * 1e3,
         state: "working"
       };
+      const previous = this.agents().find((a) => a.agentId === agent2.agentId);
+      if (previous) this.coordination.finish(previous);
       this.db.prepare("INSERT OR REPLACE INTO agents VALUES(?,?,?,?,?,?)").run(
         agent2.agentId,
         agent2.taskId,
@@ -20850,6 +22202,7 @@ var Store = class {
         JSON.stringify(agent2),
         agent2.expiresAt
       );
+      this.coordination.begin(agent2);
       return agent2;
     });
     try {
@@ -20858,7 +22211,7 @@ var Store = class {
         const active = (claim2.role === "reviewer" ? delivery.data.workflow.find((s) => s.phase === "review") : void 0) ?? delivery.data.workflow.find((s) => s.phase === "active");
         if (active)
           this.execute({
-            commandId: crypto2.randomUUID(),
+            commandId: crypto3.randomUUID(),
             actor: claim2.agentId,
             op: "update",
             kind: "task",
@@ -20870,7 +22223,7 @@ var Store = class {
       }
       if (delivery.data.status === "planned")
         this.execute({
-          commandId: crypto2.randomUUID(),
+          commandId: crypto3.randomUUID(),
           actor: claim2.agentId,
           op: "update",
           kind: "delivery",
@@ -20897,6 +22250,8 @@ var Store = class {
     });
   }
   release(token) {
+    const agent = this.agents().find((a) => a.token === token);
+    if (agent) this.coordination.finish(agent);
     this.db.prepare("DELETE FROM agents WHERE token=?").run(token);
     this.changed(false);
     return { released: true };

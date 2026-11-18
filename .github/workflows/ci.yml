@@ -44,7 +44,7 @@ jobs:
       - run: pnpm test:runtime
       - run: pnpm validate:plugin
       - run: pnpm exec claude plugin validate . --strict
-      - run: git diff --exit-code -- plugins/nexo/runtime plugins/nexo/bootstrap
+      - run: git diff --exit-code -- plugins/nexo/runtime plugins/nexo/bootstrap plugins/nexo/source
       - run: pnpm audit --prod --audit-level high
   browser:
     runs-on: ubuntu-latest

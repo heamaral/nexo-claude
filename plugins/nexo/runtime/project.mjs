@@ -19735,7 +19735,8 @@ var stageSchema = external_exports.object({
   id,
   name: text.max(80),
   phase: external_exports.enum(["queued", "active", "review", "done"]),
-  gate: external_exports.string().max(2e3).optional()
+  gate: external_exports.string().max(2e3).optional(),
+  checks: external_exports.array(id).max(30).optional()
 }).strict();
 var workflowSchema = external_exports.array(stageSchema).min(2).max(30).refine(
   (v) => new Set(v.map((s) => s.id)).size === v.length && v.some((s) => s.phase === "done") && v.some((s) => s.phase === "queued"),
@@ -19772,12 +19773,42 @@ var taskSchema = external_exports.object({
   dependencies: external_exports.array(id).max(200).default([]),
   criteria: external_exports.array(text).max(50).default([]),
   blocker: external_exports.string().max(2e3).optional(),
+  waiting: external_exports.object({
+    reason: external_exports.enum(["dependency", "resource", "integration", "user-test", "decision"]),
+    nextAction: text,
+    owner: text.max(200),
+    since: external_exports.string().datetime()
+  }).strict().nullable().optional(),
+  source: external_exports.object({
+    adapter: id,
+    id: external_exports.string().min(1).max(200),
+    status: external_exports.string().max(100).optional()
+  }).strict().optional(),
+  aliases: external_exports.array(external_exports.string().min(1).max(200)).max(50).optional(),
+  resources: external_exports.array(id).max(30).optional(),
+  workType: external_exports.enum(["research", "implementation", "integration"]).optional(),
+  checkpoint: external_exports.object({
+    goal: text,
+    remaining: external_exports.array(text).max(30),
+    decisions: external_exports.array(text).max(30).default([]),
+    rejected: external_exports.array(text).max(30).default([]),
+    references: external_exports.array(external_exports.string().max(1e3)).max(100).default([]),
+    nextStep: text,
+    sourceCommit: external_exports.string().regex(/^[a-f0-9]{40,64}$/).optional()
+  }).strict().optional(),
   result: external_exports.string().max(12e3).default(""),
   evidence: external_exports.array(
     external_exports.object({
       label: text,
       url: external_exports.string().max(2e3).optional(),
-      commit: external_exports.string().regex(/^[a-f0-9]{7,64}$/).optional()
+      commit: external_exports.string().regex(/^[a-f0-9]{7,64}$/).optional(),
+      repoId: id.optional(),
+      checkId: id.optional(),
+      runId: id.optional(),
+      fingerprint: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
+      status: external_exports.enum(["PASS", "FAIL", "BLOCKED", "STALE"]).optional(),
+      scope: external_exports.enum(["research", "draft", "integrated"]).optional(),
+      artifact: external_exports.string().max(1e3).optional()
     })
   ).max(100).default([])
 }).strict();
@@ -19811,16 +19842,24 @@ var claimSchema = external_exports.object({
   sessionId: external_exports.string().max(200).optional(),
   activity: external_exports.string().max(500).default("Working"),
   scopes: external_exports.array(external_exports.string().min(1).max(500)).min(1).max(50),
-  ttlSeconds: external_exports.number().int().min(30).max(600).default(120)
+  ttlSeconds: external_exports.number().int().min(30).max(600).default(120),
+  workspaceId: id.optional(),
+  resources: external_exports.array(id).max(30).default([]),
+  executionId: id.optional(),
+  parentExecutionId: id.optional(),
+  model: external_exports.string().max(100).optional(),
+  effort: external_exports.enum(["low", "medium", "high", "max"]).optional()
 }).strict();
 var NexoError = class extends Error {
-  constructor(code, message, status = 409) {
+  constructor(code, message, status = 409, details) {
     super(message);
     this.code = code;
     this.status = status;
+    this.details = details;
   }
   code;
   status;
+  details;
 };
 function assert2(ok, code, message, status = 409) {
   if (!ok) throw new NexoError(code, message, status);
@@ -19868,6 +19907,35 @@ function atomicWrite(file2, data, mode = 384) {
   }
 }
 function findProject(cwd = process.cwd()) {
+  const gitDir = gitDirectory(cwd);
+  if (gitDir) {
+    const file2 = path.join(gitDir, "nexo-coordinator.json");
+    if (fs2.existsSync(file2)) {
+      assert2(
+        !fs2.lstatSync(file2).isSymbolicLink() && fs2.statSync(file2).size <= 8192,
+        "UNSAFE_COORDINATOR",
+        "Invalid coordinator link"
+      );
+      const link = JSON.parse(fs2.readFileSync(file2, "utf8"));
+      assert2(
+        link.schema === 1 && typeof link.root === "string",
+        "INVALID_COORDINATOR",
+        "Invalid coordinator registration"
+      );
+      assert2(
+        fs2.existsSync(link.root),
+        "COORDINATOR_MISSING",
+        "The registered coordinator moved. Re-register this workspace; do not create a replacement board."
+      );
+      const root = fs2.realpathSync.native(link.root);
+      assert2(
+        loadConfig(root).id === link.projectId,
+        "PROJECT_MISMATCH",
+        "The registered coordinator changed identity"
+      );
+      return root;
+    }
+  }
   let current = fs2.realpathSync.native(cwd);
   for (; ; ) {
     if (fs2.existsSync(path.join(current, ".nexo", "project.json"))) return current;
@@ -19876,6 +19944,32 @@ function findProject(cwd = process.cwd()) {
     current = up;
   }
   throw new Error("Project is not initialized. Run /nexo:init in this directory.");
+}
+function gitDirectory(cwd) {
+  let current = fs2.realpathSync.native(cwd);
+  for (; ; ) {
+    const entry = path.join(current, ".git");
+    if (fs2.existsSync(entry)) {
+      const stat = fs2.lstatSync(entry);
+      assert2(
+        !stat.isSymbolicLink(),
+        "UNSAFE_GIT_DIRECTORY",
+        "Git metadata must not be a symbolic link"
+      );
+      if (stat.isDirectory()) return entry;
+      assert2(
+        stat.isFile() && stat.size <= 8192,
+        "UNSAFE_GIT_DIRECTORY",
+        "Invalid Git worktree pointer"
+      );
+      const match = /^gitdir:\s*([^\r\n]+)\s*$/.exec(fs2.readFileSync(entry, "utf8"));
+      assert2(match, "UNSAFE_GIT_DIRECTORY", "Invalid Git worktree pointer");
+      return fs2.realpathSync.native(path.resolve(current, match[1].trim()));
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return;
+    current = parent;
+  }
 }
 function loadConfig(root) {
   const dir = path.join(root, ".nexo");
@@ -19940,7 +20034,7 @@ function initialize(cwd = process.cwd(), name, options = {}) {
   if (!fs2.existsSync(rule))
     atomicWrite(
       rule,
-      "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Read Nexo MCP state before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
+      "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Use focused Nexo MCP query context before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
     );
   return { root, config: config2, created: true };
 }
@@ -19969,6 +20063,7 @@ function safeEventsDir(root) {
 export {
   atomicWrite,
   findProject,
+  gitDirectory,
   initialize,
   loadConfig,
   localDir,

@@ -1,6 +1,6 @@
 # Nexo data handling
 
-Nexo is a local, open-source Claude Code plugin. The project maintainer does not operate a hosted Nexo application service, receive your board content through the plugin, or collect Nexo analytics or telemetry.
+Nexo is a local, open-source Claude Code plugin. The project maintainer does not operate a hosted Nexo application service, receive your board content through the plugin, or collect analytics or telemetry from Nexo installations.
 
 ## Local information
 
@@ -9,6 +9,14 @@ Nexo processes the project location, Claude lifecycle events, task and delivery 
 Durable project history is stored in `.nexo/` event records and closed SQLite snapshots. Live databases, ownership credentials, leases and logs are kept in ignored local state. The native helper and Node caches are stored in Claude's plugin data directory. The authenticated board communicates with the coordinator over the local loopback interface.
 
 Local history has no automatic retention deadline. You control local deletion, backups and whether project history is committed or pushed to a Git remote. Git commits, remote copies and backups can retain earlier content after a local edit or deletion. Review the data before sharing it, and do not put secrets in titles, descriptions, results or evidence. Ignored local state and runtime caches should not be committed.
+
+## Optional local measurements and checks
+
+Telemetry is disabled by default per project. When explicitly enabled, structured usage samples and coordination response metrics stay in ignored local SQLite. Provider counts and estimates are labeled separately. Nexo does not extract prompts, conversation history, tool outputs or credentials for measurements. The user can clear usage samples and metrics with the explicit telemetry_clear tool. Disabling collection does not automatically erase existing local records.
+
+Trusted check adapters are disabled until a project config declares an executable and fixed arguments. They run in the configured project repository under a working lease, inherit the local environment and may perform the operations implemented by that trusted project command. Nexo discards check stdout/stderr and stores a local result attestation. Review check configuration before enabling it.
+
+Closed execution summaries can be explicitly exported into Git history. They omit session identity, tokens, scopes, machine paths and live activity text. Checkpoints and aliases contain only content deliberately supplied by users or agents, not automatically captured conversations. Review them before sharing.
 
 ## Network requests and other tools
 
