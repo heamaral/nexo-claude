@@ -447,6 +447,28 @@ export class Store {
       if (!this.batching) this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
     }
+    if (command.kind === 'task' && Array.isArray(command.data.evidence)) {
+      const fields = new Set([
+        'label',
+        'url',
+        'commit',
+        'repoId',
+        'checkId',
+        'runId',
+        'fingerprint',
+        'status',
+        'scope',
+        'artifact',
+      ]);
+      for (const evidence of command.data.evidence)
+        if (evidence && typeof evidence === 'object')
+          assert(
+            Object.keys(evidence).every((key) => fields.has(key)),
+            'INVALID_EVIDENCE_FIELDS',
+            'Evidence contains unsupported fields; keep lease credentials only in runtime context',
+            400,
+          );
+    }
     const result = this.transaction(() => {
       const claims = this.agents().filter(
         (a) => a.taskId === command.id && a.role === 'executor' && a.state === 'working',

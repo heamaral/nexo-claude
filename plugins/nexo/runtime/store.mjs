@@ -20648,6 +20648,11 @@ var Coordination = class {
   begin(a) {
     const prior = this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(a.executionId);
     assert2(!prior, "EXECUTION_EXISTS", "Use a new executionId for a new lease");
+    assert2(
+      !fs5.existsSync(path4.join(this.store.root, ".nexo", "executions", a.executionId + ".json")),
+      "EXECUTION_EXISTS",
+      "This execution ID already belongs to exported project history"
+    );
     if (a.parentExecutionId)
       assert2(
         this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(a.parentExecutionId),
@@ -20764,6 +20769,13 @@ var Coordination = class {
       "Choose the intended coordinator project identity"
     );
     const absolute = fs5.realpathSync.native(path4.resolve(this.store.root, v.path));
+    const prior = this.workspace(v.id);
+    if (prior && this.store.agents().some((a) => a.state === "working" && a.workspaceId === v.id))
+      assert2(
+        prior.path === absolute && prior.mode === v.mode && (prior.coordination ?? "shared") === v.coordination,
+        "WORKSPACE_ACTIVE",
+        "Release active workspace claims before changing its path or coordination mode"
+      );
     const common = async (cwd) => fs5.realpathSync.native(
       path4.resolve(cwd, await gitRead(cwd, ["rev-parse", "--git-common-dir"]))
     );
@@ -20822,9 +20834,9 @@ var Coordination = class {
     if (absolute !== this.store.root && v.coordination === "independent") {
       const link = path4.join(gitDirectory(absolute), "nexo-coordinator.json");
       if (fs5.existsSync(link)) {
-        const prior = JSON.parse(fs5.readFileSync(link, "utf8"));
+        const prior2 = JSON.parse(fs5.readFileSync(link, "utf8"));
         assert2(
-          prior.projectId === this.store.config.id,
+          prior2.projectId === this.store.config.id,
           "COORDINATOR_MISMATCH",
           "Explicitly unlink the other coordinator first"
         );
@@ -20981,7 +20993,7 @@ var Coordination = class {
     assert2(actor, "STALE_LEASE", "Active task ownership is required");
     if (check2.resourceId)
       assert2(
-        actor.resources.includes(check2.resourceId),
+        actor.resources?.includes(check2.resourceId),
         "RESOURCE_REQUIRED",
         "Claim the check resource before running"
       );
@@ -21734,6 +21746,28 @@ var Store = class {
       );
       if (!this.batching) this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
+    }
+    if (command.kind === "task" && Array.isArray(command.data.evidence)) {
+      const fields = /* @__PURE__ */ new Set([
+        "label",
+        "url",
+        "commit",
+        "repoId",
+        "checkId",
+        "runId",
+        "fingerprint",
+        "status",
+        "scope",
+        "artifact"
+      ]);
+      for (const evidence of command.data.evidence)
+        if (evidence && typeof evidence === "object")
+          assert2(
+            Object.keys(evidence).every((key) => fields.has(key)),
+            "INVALID_EVIDENCE_FIELDS",
+            "Evidence contains unsupported fields; keep lease credentials only in runtime context",
+            400
+          );
     }
     const result = this.transaction(() => {
       const claims = this.agents().filter(

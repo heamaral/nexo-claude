@@ -16,6 +16,28 @@ function config(f, fields) {
     JSON.stringify({ schema: 1, ...fields }),
   );
 }
+test('durable evidence rejects unsupported credential fields before creating an event', () => {
+  const f = fixture();
+  try {
+    seed(f.store);
+    const count = f.store.events().length;
+    assert.throws(
+      () =>
+        command(
+          f.store,
+          'task',
+          'tokens',
+          { evidence: [{ label: 'Evidence', leaseToken: 'must-stay-ephemeral' }] },
+          'update',
+        ),
+      /unsupported fields/,
+    );
+    assert.equal(f.store.events().length, count);
+    assert.ok(!JSON.stringify(f.store.events()).includes('must-stay-ephemeral'));
+  } finally {
+    f.close();
+  }
+});
 const create = (key, data) => ({
   commandId: crypto.randomUUID(),
   actor: 'importer',
@@ -448,6 +470,16 @@ test('registered worktrees use one coordinator, isolate file scopes and reject s
         ),
       /Write scope owned/,
     );
+    await assert.rejects(
+      f.store.coordination.registerWorkspace({
+        id: 'worker-a',
+        path: f.root,
+        mode: 'shared',
+        expectedProjectId: f.store.config.id,
+      }),
+      /Release active workspace claims/,
+    );
+    assert.equal(f.store.coordination.workspace('worker-a').path, checkout);
     const privateGit = execFileSync('git', ['rev-parse', '--absolute-git-dir'], {
       cwd: checkout,
       encoding: 'utf8',

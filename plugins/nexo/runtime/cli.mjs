@@ -21279,6 +21279,11 @@ CREATE TABLE IF NOT EXISTS coordination_metrics(key TEXT PRIMARY KEY, count INTE
       begin(a) {
         const prior = this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(a.executionId);
         assert2(!prior, "EXECUTION_EXISTS", "Use a new executionId for a new lease");
+        assert2(
+          !fs7.existsSync(path6.join(this.store.root, ".nexo", "executions", a.executionId + ".json")),
+          "EXECUTION_EXISTS",
+          "This execution ID already belongs to exported project history"
+        );
         if (a.parentExecutionId)
           assert2(
             this.store.db.prepare("SELECT id FROM executions WHERE id=?").get(a.parentExecutionId),
@@ -21395,6 +21400,13 @@ CREATE TABLE IF NOT EXISTS coordination_metrics(key TEXT PRIMARY KEY, count INTE
           "Choose the intended coordinator project identity"
         );
         const absolute = fs7.realpathSync.native(path6.resolve(this.store.root, v.path));
+        const prior = this.workspace(v.id);
+        if (prior && this.store.agents().some((a) => a.state === "working" && a.workspaceId === v.id))
+          assert2(
+            prior.path === absolute && prior.mode === v.mode && (prior.coordination ?? "shared") === v.coordination,
+            "WORKSPACE_ACTIVE",
+            "Release active workspace claims before changing its path or coordination mode"
+          );
         const common = async (cwd) => fs7.realpathSync.native(
           path6.resolve(cwd, await gitRead(cwd, ["rev-parse", "--git-common-dir"]))
         );
@@ -21453,9 +21465,9 @@ CREATE TABLE IF NOT EXISTS coordination_metrics(key TEXT PRIMARY KEY, count INTE
         if (absolute !== this.store.root && v.coordination === "independent") {
           const link = path6.join(gitDirectory(absolute), "nexo-coordinator.json");
           if (fs7.existsSync(link)) {
-            const prior = JSON.parse(fs7.readFileSync(link, "utf8"));
+            const prior2 = JSON.parse(fs7.readFileSync(link, "utf8"));
             assert2(
-              prior.projectId === this.store.config.id,
+              prior2.projectId === this.store.config.id,
               "COORDINATOR_MISMATCH",
               "Explicitly unlink the other coordinator first"
             );
@@ -21612,7 +21624,7 @@ CREATE TABLE IF NOT EXISTS coordination_metrics(key TEXT PRIMARY KEY, count INTE
         assert2(actor, "STALE_LEASE", "Active task ownership is required");
         if (check2.resourceId)
           assert2(
-            actor.resources.includes(check2.resourceId),
+            actor.resources?.includes(check2.resourceId),
             "RESOURCE_REQUIRED",
             "Claim the check resource before running"
           );
@@ -23000,6 +23012,28 @@ var Store = class {
       if (!this.batching) this.exportEvents();
       return { entity: this.get(command.id), eventId: original.id, duplicate: true };
     }
+    if (command.kind === "task" && Array.isArray(command.data.evidence)) {
+      const fields = /* @__PURE__ */ new Set([
+        "label",
+        "url",
+        "commit",
+        "repoId",
+        "checkId",
+        "runId",
+        "fingerprint",
+        "status",
+        "scope",
+        "artifact"
+      ]);
+      for (const evidence of command.data.evidence)
+        if (evidence && typeof evidence === "object")
+          assert2(
+            Object.keys(evidence).every((key) => fields.has(key)),
+            "INVALID_EVIDENCE_FIELDS",
+            "Evidence contains unsupported fields; keep lease credentials only in runtime context",
+            400
+          );
+    }
     const result = this.transaction(() => {
       const claims = this.agents().filter(
         (a) => a.taskId === command.id && a.role === "executor" && a.state === "working"
@@ -23561,6 +23595,37 @@ async function startServer(root, options = {}) {
   let origin = "", error62, shuttingDown = false;
   let closing;
   const measurements = /* @__PURE__ */ new WeakMap();
+  const metricRoutes = new Set(
+    [
+      "health",
+      "bootstrap",
+      "state",
+      "changes",
+      "diagnostics",
+      "executions",
+      "search",
+      "events",
+      "shutdown",
+      "ticket",
+      "command",
+      "query",
+      "batch",
+      "schedule",
+      "workspace",
+      "reconcile",
+      "usage",
+      "telemetry-clear",
+      "run-check",
+      "executions-export",
+      "claim",
+      "heartbeat",
+      "release",
+      "session-end",
+      "hook",
+      "snapshot",
+      "resolve"
+    ].map((v) => "/api/" + v)
+  );
   let telemetry = false;
   try {
     telemetry = store.coordination.config().telemetry;
@@ -23630,7 +23695,7 @@ data: ${JSON.stringify({ revision: store.revision, durableRevision: store.durabl
       const url2 = new URL(req.url ?? "/", origin);
       measurements.set(res, {
         start: performance.now(),
-        route: url2.pathname.startsWith("/api/") ? url2.pathname.slice(0, 80) : "page"
+        route: metricRoutes.has(url2.pathname) ? url2.pathname : "other"
       });
       assert2(req.headers.host === new URL(origin).host, "HOST_DENIED", "Invalid Host", 403);
       assert2(

@@ -44,6 +44,37 @@ export async function startServer(
     shuttingDown = false;
   let closing: Promise<void> | undefined;
   const measurements = new WeakMap<http.ServerResponse, { start: number; route: string }>();
+  const metricRoutes = new Set(
+    [
+      'health',
+      'bootstrap',
+      'state',
+      'changes',
+      'diagnostics',
+      'executions',
+      'search',
+      'events',
+      'shutdown',
+      'ticket',
+      'command',
+      'query',
+      'batch',
+      'schedule',
+      'workspace',
+      'reconcile',
+      'usage',
+      'telemetry-clear',
+      'run-check',
+      'executions-export',
+      'claim',
+      'heartbeat',
+      'release',
+      'session-end',
+      'hook',
+      'snapshot',
+      'resolve',
+    ].map((v) => '/api/' + v),
+  );
   let telemetry = false;
   try {
     telemetry = store.coordination.config().telemetry;
@@ -111,7 +142,7 @@ export async function startServer(
       const url = new URL(req.url ?? '/', origin);
       measurements.set(res, {
         start: performance.now(),
-        route: url.pathname.startsWith('/api/') ? url.pathname.slice(0, 80) : 'page',
+        route: metricRoutes.has(url.pathname) ? url.pathname : 'other',
       });
       assert(req.headers.host === new URL(origin).host, 'HOST_DENIED', 'Invalid Host', 403);
       assert(

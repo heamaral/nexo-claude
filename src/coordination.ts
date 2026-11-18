@@ -584,6 +584,11 @@ export class Coordination {
   begin(a: Agent) {
     const prior = this.store.db.prepare('SELECT id FROM executions WHERE id=?').get(a.executionId!);
     assert(!prior, 'EXECUTION_EXISTS', 'Use a new executionId for a new lease');
+    assert(
+      !fs.existsSync(path.join(this.store.root, '.nexo', 'executions', a.executionId! + '.json')),
+      'EXECUTION_EXISTS',
+      'This execution ID already belongs to exported project history',
+    );
     if (a.parentExecutionId)
       assert(
         this.store.db.prepare('SELECT id FROM executions WHERE id=?').get(a.parentExecutionId),
@@ -716,6 +721,15 @@ export class Coordination {
       'Choose the intended coordinator project identity',
     );
     const absolute = fs.realpathSync.native(path.resolve(this.store.root, v.path));
+    const prior = this.workspace(v.id);
+    if (prior && this.store.agents().some((a) => a.state === 'working' && a.workspaceId === v.id))
+      assert(
+        prior.path === absolute &&
+          prior.mode === v.mode &&
+          (prior.coordination ?? 'shared') === v.coordination,
+        'WORKSPACE_ACTIVE',
+        'Release active workspace claims before changing its path or coordination mode',
+      );
     const common = async (cwd: string) =>
       fs.realpathSync.native(
         path.resolve(cwd, await gitRead(cwd, ['rev-parse', '--git-common-dir'])),
@@ -958,7 +972,7 @@ export class Coordination {
     assert(actor, 'STALE_LEASE', 'Active task ownership is required');
     if (check.resourceId)
       assert(
-        actor.resources.includes(check.resourceId),
+        actor.resources?.includes(check.resourceId),
         'RESOURCE_REQUIRED',
         'Claim the check resource before running',
       );
