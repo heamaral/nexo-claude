@@ -91,6 +91,20 @@ test('real board: live agents, themes, modals, flow, mobile and reduced motion',
       { leaseToken: s.store.agents().find((a) => a.taskId === 'form').token },
     );
     await page.getByText('Live update received by the board', { exact: true }).waitFor();
+    const requests = [];
+    const observe = (r) => requests.push(new URL(r.url()).pathname);
+    page.on('request', observe);
+    const formAgent = s.store.agents().find((a) => a.taskId === 'form');
+    s.store.heartbeat(formAgent.token, 'Presence-only refresh');
+    await page.waitForTimeout(350);
+    page.off('request', observe);
+    assert.ok(!requests.includes('/api/state'), 'heartbeats must not reload the full board');
+    assert.ok(!requests.includes('/api/changes'), 'heartbeats use a small presence event');
+    await page.getByRole('button', { name: /Project coordination/ }).click();
+    await page.getByRole('heading', { name: 'Runtime health' }).waitFor();
+    await page.getByText('Canonical coordinator', { exact: true }).waitFor();
+    await page.screenshot({ path: 'test-results/runtime-diagnostics.png', fullPage: true });
+    await page.keyboard.press('Escape');
     await s.store.snapshot();
     const rename = fs.promises.rename;
     try {

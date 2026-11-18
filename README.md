@@ -4,7 +4,7 @@
 
 Nexo is a local Claude Code plugin with a live browser board for deliveries, hierarchical tasks, dependencies, teams and active agents. Plans and history belong to your project. Agent ownership is coordinated through expiring leases in SQLite.
 
-[Install](#get-started) · [How it works](#from-a-delivery-to-the-agents-working-on-it) · [Concurrency and recovery](docs/CONCURRENCY.md) · [Validation](docs/VALIDATION.md) · [MIT license](LICENSE)
+[Install](#get-started) · [How it works](#from-a-delivery-to-the-agents-working-on-it) · [Concurrency and recovery](docs/CONCURRENCY.md) · [Focused coordination](docs/COORDINATION.md) · [Validation](docs/VALIDATION.md) · [MIT license](LICENSE)
 
 ![Example delivery dependency graph in dark mode](docs/screenshots/en/graph-dark.png)
 
@@ -32,6 +32,10 @@ Teams and agents are attached to the delivery's tasks.
 **Hierarchy describes what belongs together. Dependencies describe what must happen first.** They are stored separately and have separate graph views. A parent card summarizes its subtasks; the dependency view shows branching and joining execution paths without repeating each prerequisite card.
 
 Each delivery has its own board, teams and graph. Completing one delivery preserves its result; a later request can create another delivery linked to the previous one.
+
+## New in 1.1
+
+Focused, budgeted task context replaces repeated full-board reads. Claims are idempotent for the same execution. Project policies can declare resource capacities, explicit worktree registration, waiting reasons, checkpoints and trusted commit-bound checks. The board receives presence updates separately from card deltas and shows attempt history and operational diagnostics. Optional usage measurements remain local and distinguish provider counts from estimates. See the [coordination guide](docs/COORDINATION.md) for configuration and migration.
 
 ## What you can see and coordinate
 

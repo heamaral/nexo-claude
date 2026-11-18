@@ -100,6 +100,8 @@ test('concurrent HTTP claims have exactly one executor and hooks guard unassigne
     const a = s.store.agents().find((a) => a.state === 'working');
     assert.ok(a);
     await post('hook', { sessionId: a.sessionId, agentId: a.agentId, event: 'SubagentStop' });
+    assert.equal(s.store.agents().length, 1, 'another Stop hook can veto termination');
+    await post('release', { token: a.token });
     assert.equal(s.store.agents().length, 0);
     assert.notEqual(s.store.get('tokens').data.stageId, 'done');
   } finally {

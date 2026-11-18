@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -91,12 +90,9 @@ func run() error {
 	// automatic preparation independently, even before a project is initialized.
 	var hookInput []byte
 	if args[0] == "hook" {
-		hookInput, err = io.ReadAll(io.LimitReader(os.Stdin, 262145))
+		hookInput, err = projectHookInput(os.Stdin)
 		if err != nil {
 			return err
-		}
-		if len(hookInput) > 262144 {
-			return fmt.Errorf("hook input exceeds 256 KiB")
 		}
 		var body struct {
 			Cwd string `json:"cwd"`
@@ -145,6 +141,23 @@ func hasProject(dir string) bool {
 		return false
 	}
 	for {
+		gitEntry := filepath.Join(dir, ".git")
+		if s, e := os.Stat(gitEntry); e == nil {
+			gitDir := gitEntry
+			if s.Mode().IsRegular() && s.Size() <= 8192 {
+				if raw, e := os.ReadFile(gitEntry); e == nil && strings.HasPrefix(string(raw), "gitdir:") {
+					gitDir = strings.TrimSpace(strings.TrimPrefix(string(raw), "gitdir:"))
+					if !filepath.IsAbs(gitDir) {
+						gitDir = filepath.Join(dir, gitDir)
+					}
+				}
+			}
+			if link, e := os.Stat(filepath.Join(gitDir, "nexo-coordinator.json")); e == nil && link.Mode().IsRegular() && link.Size() <= 8192 {
+				// Node validates the registered project identity. Do not silently
+				// skip a registered worktree whose tracked .nexo files are absent.
+				return true
+			}
+		}
 		if s, e := os.Stat(filepath.Join(dir, ".nexo", "project.json")); e == nil && s.Mode().IsRegular() {
 			return true
 		}

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { readHookInput } from './hooks.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -66,6 +67,22 @@ async function main() {
     if (!Number.isFinite(budget) || budget <= 0 || budget > 1000)
       throw new Error('Budget must be greater than 0 and at most 1000 USD');
     const sessionId = crypto.randomUUID();
+    const workspaceId =
+      workspace === root
+        ? undefined
+        : 'worktree-' + crypto.createHash('sha256').update(workspace).digest('hex').slice(0, 16);
+    if (workspaceId)
+      await request(
+        'workspace',
+        {
+          id: workspaceId,
+          path: workspace,
+          mode: 'isolated',
+          coordination: 'shared',
+          expectedProjectId: loadConfig(root).id,
+        },
+        root,
+      );
     const actor = await request(
       'claim',
       {
@@ -75,6 +92,7 @@ async function main() {
         name: flag('--name') ?? 'Independent session',
         teamId: flag('--team'),
         scopes,
+        workspaceId,
         ttlSeconds: 600,
       },
       root,
@@ -158,14 +176,7 @@ async function main() {
     return;
   }
   if (action === 'hook') {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    for await (const c of process.stdin) {
-      size += c.length;
-      if (size > 262144) throw new Error('Hook input exceeded the size limit');
-      chunks.push(c);
-    }
-    const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const input = await readHookInput(process.stdin);
     let root: string;
     try {
       root = findProject(process.env.NEXO_PROJECT_ROOT ?? input.cwd ?? cwd);
@@ -180,24 +191,32 @@ async function main() {
         JSON.stringify({
           hookSpecificOutput: {
             hookEventName: event,
-            additionalContext: `Nexo is enabled for this project. Your identity: agentId=${agentId}; sessionId=${sessionId}. Read state and claim your card using these IDs before writing or running shell tools. Record results and evidence before completion; heartbeat renews the lease and release ends participation. Use nexo:planner to organize deliveries, teams, hierarchy and dependencies through MCP. /board opens the live board. Respond in the user's language and preserve the language of project content.`,
+            additionalContext: `Nexo identity: agentId=${agentId}; sessionId=${sessionId}. Use query(view=assignment,id=agentId) to recover ownership, query(view=task,id=taskId) for focused context, and claim before writes or shell tools. Repeated identical claims reuse a working lease. Checkpoint before handoff; record result and evidence before completion; heartbeat before expiry and release when finished. Use nexo:planner for hierarchy and dependencies. /board opens the board. Preserve the user's and project's languages.`,
           },
         }),
       );
       return;
     }
-    await request(
-      'hook',
-      {
-        sessionId,
-        agentId,
-        event,
-        toolName: input.tool_name,
-        filePath: input.tool_input?.file_path,
-        workspace: process.env.NEXO_WORKSPACE ?? input.cwd,
-      },
-      root,
-    );
+    try {
+      await request(
+        'hook',
+        {
+          sessionId,
+          agentId,
+          event,
+          toolName: input.tool_name,
+          filePath: input.tool_input?.file_path,
+          workspace: process.env.NEXO_WORKSPACE ?? input.cwd,
+          toolUseId: input.tool_use_id,
+          stopHookActive: input.stop_hook_active,
+        },
+        root,
+      );
+    } catch (error) {
+      if (event === 'PreToolUse') throw error;
+      // Bookkeeping cannot retroactively veto a completed tool or block shutdown.
+      console.error('Nexo bookkeeping deferred; inspect diagnostics if repeated.');
+    }
     return;
   }
   console.log(

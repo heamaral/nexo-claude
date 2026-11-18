@@ -12,6 +12,7 @@ const backend = await build({
     './src/store.ts',
     './src/server.ts',
     './src/project.ts',
+    './src/hooks.ts',
   ],
   outdir: out,
   outExtension: { '.js': '.mjs' },
@@ -34,7 +35,7 @@ const frontend = await build({
   platform: 'browser',
   format: 'esm',
   target: ['chrome120', 'firefox120', 'safari17'],
-  minify: true,
+  minify: false,
   legalComments: 'eof',
   logLevel: 'warning',
   metafile: true,
@@ -43,6 +44,21 @@ fs.writeFileSync(
   path.join(out, 'web/index.html'),
   '<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="Nexo — your project deliveries, cards and agents, live."><title>Nexo · Project board</title><link rel="stylesheet" href="/app.css"><script type="module" src="/app.js"></script></head><body><div id="root"></div></body></html>\n',
 );
+// Ship the actual application and native helper sources beside the runtime for
+// reviewer inspection. These are readable sources, never a runtime download.
+const reviewSource = path.join(root, 'plugins/nexo/source');
+fs.mkdirSync(reviewSource, { recursive: true });
+fs.cpSync(path.join(root, 'src'), path.join(reviewSource, 'src'), { recursive: true });
+function copyGoSource(from, to) {
+  fs.mkdirSync(to, { recursive: true });
+  for (const item of fs.readdirSync(from, { withFileTypes: true })) {
+    if (item.isDirectory() && ['dispatch', 'loader', 'pack'].includes(item.name))
+      copyGoSource(path.join(from, item.name), path.join(to, item.name));
+    else if (item.isFile() && (item.name.endsWith('.go') || item.name === 'go.mod'))
+      fs.copyFileSync(path.join(from, item.name), path.join(to, item.name));
+  }
+}
+copyGoSource(path.join(root, 'bootstrap'), path.join(reviewSource, 'bootstrap'));
 const packages = new Map();
 for (const input of [
   ...Object.keys(backend.metafile.inputs),

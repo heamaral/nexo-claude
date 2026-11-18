@@ -36667,7 +36667,8 @@ var stageSchema = external_exports.object({
   id,
   name: text.max(80),
   phase: external_exports.enum(["queued", "active", "review", "done"]),
-  gate: external_exports.string().max(2e3).optional()
+  gate: external_exports.string().max(2e3).optional(),
+  checks: external_exports.array(id).max(30).optional()
 }).strict();
 var workflowSchema = external_exports.array(stageSchema).min(2).max(30).refine(
   (v) => new Set(v.map((s) => s.id)).size === v.length && v.some((s) => s.phase === "done") && v.some((s) => s.phase === "queued"),
@@ -36704,12 +36705,42 @@ var taskSchema = external_exports.object({
   dependencies: external_exports.array(id).max(200).default([]),
   criteria: external_exports.array(text).max(50).default([]),
   blocker: external_exports.string().max(2e3).optional(),
+  waiting: external_exports.object({
+    reason: external_exports.enum(["dependency", "resource", "integration", "user-test", "decision"]),
+    nextAction: text,
+    owner: text.max(200),
+    since: external_exports.string().datetime()
+  }).strict().nullable().optional(),
+  source: external_exports.object({
+    adapter: id,
+    id: external_exports.string().min(1).max(200),
+    status: external_exports.string().max(100).optional()
+  }).strict().optional(),
+  aliases: external_exports.array(external_exports.string().min(1).max(200)).max(50).optional(),
+  resources: external_exports.array(id).max(30).optional(),
+  workType: external_exports.enum(["research", "implementation", "integration"]).optional(),
+  checkpoint: external_exports.object({
+    goal: text,
+    remaining: external_exports.array(text).max(30),
+    decisions: external_exports.array(text).max(30).default([]),
+    rejected: external_exports.array(text).max(30).default([]),
+    references: external_exports.array(external_exports.string().max(1e3)).max(100).default([]),
+    nextStep: text,
+    sourceCommit: external_exports.string().regex(/^[a-f0-9]{40,64}$/).optional()
+  }).strict().optional(),
   result: external_exports.string().max(12e3).default(""),
   evidence: external_exports.array(
     external_exports.object({
       label: text,
       url: external_exports.string().max(2e3).optional(),
-      commit: external_exports.string().regex(/^[a-f0-9]{7,64}$/).optional()
+      commit: external_exports.string().regex(/^[a-f0-9]{7,64}$/).optional(),
+      repoId: id.optional(),
+      checkId: id.optional(),
+      runId: id.optional(),
+      fingerprint: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
+      status: external_exports.enum(["PASS", "FAIL", "BLOCKED", "STALE"]).optional(),
+      scope: external_exports.enum(["research", "draft", "integrated"]).optional(),
+      artifact: external_exports.string().max(1e3).optional()
     })
   ).max(100).default([])
 }).strict();
@@ -36743,16 +36774,24 @@ var claimSchema = external_exports.object({
   sessionId: external_exports.string().max(200).optional(),
   activity: external_exports.string().max(500).default("Working"),
   scopes: external_exports.array(external_exports.string().min(1).max(500)).min(1).max(50),
-  ttlSeconds: external_exports.number().int().min(30).max(600).default(120)
+  ttlSeconds: external_exports.number().int().min(30).max(600).default(120),
+  workspaceId: id.optional(),
+  resources: external_exports.array(id).max(30).default([]),
+  executionId: id.optional(),
+  parentExecutionId: id.optional(),
+  model: external_exports.string().max(100).optional(),
+  effort: external_exports.enum(["low", "medium", "high", "max"]).optional()
 }).strict();
 var NexoError = class extends Error {
-  constructor(code, message, status = 409) {
+  constructor(code, message, status = 409, details) {
     super(message);
     this.code = code;
     this.status = status;
+    this.details = details;
   }
   code;
   status;
+  details;
 };
 function assert2(ok, code, message, status = 409) {
   if (!ok) throw new NexoError(code, message, status);
@@ -36800,6 +36839,35 @@ function atomicWrite(file2, data, mode = 384) {
   }
 }
 function findProject(cwd = process.cwd()) {
+  const gitDir = gitDirectory(cwd);
+  if (gitDir) {
+    const file2 = path.join(gitDir, "nexo-coordinator.json");
+    if (fs2.existsSync(file2)) {
+      assert2(
+        !fs2.lstatSync(file2).isSymbolicLink() && fs2.statSync(file2).size <= 8192,
+        "UNSAFE_COORDINATOR",
+        "Invalid coordinator link"
+      );
+      const link = JSON.parse(fs2.readFileSync(file2, "utf8"));
+      assert2(
+        link.schema === 1 && typeof link.root === "string",
+        "INVALID_COORDINATOR",
+        "Invalid coordinator registration"
+      );
+      assert2(
+        fs2.existsSync(link.root),
+        "COORDINATOR_MISSING",
+        "The registered coordinator moved. Re-register this workspace; do not create a replacement board."
+      );
+      const root2 = fs2.realpathSync.native(link.root);
+      assert2(
+        loadConfig(root2).id === link.projectId,
+        "PROJECT_MISMATCH",
+        "The registered coordinator changed identity"
+      );
+      return root2;
+    }
+  }
   let current = fs2.realpathSync.native(cwd);
   for (; ; ) {
     if (fs2.existsSync(path.join(current, ".nexo", "project.json"))) return current;
@@ -36808,6 +36876,32 @@ function findProject(cwd = process.cwd()) {
     current = up;
   }
   throw new Error("Project is not initialized. Run /nexo:init in this directory.");
+}
+function gitDirectory(cwd) {
+  let current = fs2.realpathSync.native(cwd);
+  for (; ; ) {
+    const entry = path.join(current, ".git");
+    if (fs2.existsSync(entry)) {
+      const stat = fs2.lstatSync(entry);
+      assert2(
+        !stat.isSymbolicLink(),
+        "UNSAFE_GIT_DIRECTORY",
+        "Git metadata must not be a symbolic link"
+      );
+      if (stat.isDirectory()) return entry;
+      assert2(
+        stat.isFile() && stat.size <= 8192,
+        "UNSAFE_GIT_DIRECTORY",
+        "Invalid Git worktree pointer"
+      );
+      const match = /^gitdir:\s*([^\r\n]+)\s*$/.exec(fs2.readFileSync(entry, "utf8"));
+      assert2(match, "UNSAFE_GIT_DIRECTORY", "Invalid Git worktree pointer");
+      return fs2.realpathSync.native(path.resolve(current, match[1].trim()));
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return;
+    current = parent;
+  }
 }
 function loadConfig(root2) {
   const dir = path.join(root2, ".nexo");
@@ -36872,7 +36966,7 @@ function initialize(cwd = process.cwd(), name, options = {}) {
   if (!fs2.existsSync(rule))
     atomicWrite(
       rule,
-      "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Read Nexo MCP state before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
+      "# Nexo\n\nThis project uses `.nexo/` as its delivery record. Use focused Nexo MCP query context before starting work.\nUse `nexo:planner` to organize new implementation requests before execution.\nNew requests after an accepted delivery create a new delivery. Preserve accepted history.\nModel hierarchy and execution dependencies separately. Never complete cards without evidence.\nBefore delegating, associate each agent with its card and team, declare write scopes and acquire a lease.\nRenew leases during work and release them when finished. A subagent response does not prove task completion.\nUse separate worktrees for teams writing in parallel. Validate the integrated commit before acceptance.\nDo not edit SQLite or events manually. Use MCP and `/nexo:board` to inspect progress.\n\n## Language\n\nTechnical instructions use English. Respond in the user's language unless explicitly asked otherwise. Preserve the language of existing project content; use the project's established language or the user's explicit preference for new records. Never translate stable IDs, schema keys, paths or code merely to match these English instructions.\n"
     );
   return { root: root2, config: config2, created: true };
 }
@@ -36895,7 +36989,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // src/version.ts
-var VERSION = "1.0.0-rc.7";
+var VERSION = "1.1.0-rc.1";
 function compareVersions(a, b) {
   const parse3 = (s) => {
     const match = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(s);
@@ -37166,14 +37260,17 @@ async function request(route, body, root2, retried = false) {
     method: body === void 0 ? "GET" : "POST",
     headers: { Authorization: `Bearer ${r.token}`, "Content-Type": "application/json" },
     ...body === void 0 ? {} : { body: JSON.stringify(body) },
-    signal: AbortSignal.timeout(2e4)
+    signal: AbortSignal.timeout(route === "run-check" ? 65e4 : 2e4)
   });
   const result = await response.json();
   if (!response.ok && result.error === "SERVER_DRAINING" && !retried) {
     await wait(100);
     return request(route, body, root2, true);
   }
-  if (!response.ok) throw new Error(`${result.error}: ${result.message}`);
+  if (!response.ok)
+    throw new Error(
+      JSON.stringify({ error: result.error, message: result.message, details: result.details })
+    );
   return result;
 }
 async function board(root2, open2 = true) {
@@ -37198,6 +37295,131 @@ async function board(root2, open2 = true) {
   return { url: url2, expiresInSeconds: 60 };
 }
 
+// src/coordination.ts
+import { execFile, spawn as spawn2 } from "node:child_process";
+import { promisify } from "node:util";
+var executeFile = promisify(execFile);
+var executionSummarySchema = external_exports.object({
+  schema: external_exports.literal(1),
+  projectId: external_exports.string().uuid(),
+  id,
+  deliveryId: id,
+  taskId: id,
+  parentExecutionId: id.optional(),
+  model: external_exports.string().max(100).optional(),
+  effort: external_exports.string().max(20).optional(),
+  startedAt: external_exports.number().int().nonnegative(),
+  finishedAt: external_exports.number().int().nonnegative().optional(),
+  status: external_exports.enum(["released", "completed", "lost_contact"])
+}).strict();
+var configSchema2 = external_exports.object({
+  schema: external_exports.literal(1),
+  telemetry: external_exports.boolean().default(false),
+  resources: external_exports.array(
+    external_exports.object({
+      id,
+      capacity: external_exports.number().int().min(1).max(128),
+      owner: external_exports.string().max(200).optional()
+    }).strict()
+  ).max(100).default([]),
+  repositories: external_exports.array(
+    external_exports.object({
+      id,
+      path: external_exports.string().min(1).max(1e3),
+      integratedRef: external_exports.string().regex(/^[a-zA-Z0-9_./-]+$/).default("HEAD")
+    }).strict()
+  ).max(30).default([]),
+  checks: external_exports.array(
+    external_exports.object({
+      id,
+      repoId: id,
+      artifact: external_exports.string().min(1).max(1e3),
+      executable: external_exports.string().min(1).max(1e3).optional(),
+      args: external_exports.array(external_exports.string().max(2e3)).max(100).default([]),
+      timeoutSeconds: external_exports.number().int().min(1).max(600).default(120),
+      resourceId: id.optional()
+    }).strict()
+  ).max(100).default([]),
+  adapters: external_exports.array(
+    external_exports.object({
+      id,
+      path: external_exports.string().min(1).max(1e3),
+      stageMap: external_exports.record(external_exports.string(), external_exports.string()).default({})
+    }).strict()
+  ).max(30).default([]),
+  externalWrites: external_exports.array(external_exports.object({ resourceId: id, path: external_exports.string().min(1).max(1e3) }).strict()).max(30).default([])
+}).strict();
+var querySchema = external_exports.object({
+  view: external_exports.enum([
+    "summary",
+    "task",
+    "delivery",
+    "assignment",
+    "search",
+    "changes",
+    "diagnostics",
+    "executions",
+    "export"
+  ]).default("summary"),
+  id: external_exports.string().max(200).optional(),
+  sessionId: external_exports.string().max(200).optional(),
+  query: external_exports.string().max(200).optional(),
+  kind: external_exports.enum(["delivery", "task", "team"]).optional(),
+  stageId: id.optional(),
+  deliveryId: id.optional(),
+  cursor: external_exports.string().max(200).optional(),
+  limit: external_exports.number().int().min(1).max(100).default(30),
+  fields: external_exports.array(
+    external_exports.enum([
+      "description",
+      "criteria",
+      "evidence",
+      "checkpoint",
+      "result",
+      "dependencies",
+      "source"
+    ])
+  ).max(7).default([]),
+  sinceRevision: external_exports.number().int().nonnegative().optional(),
+  instance: external_exports.string().max(100).optional(),
+  maxBytes: external_exports.number().int().min(2048).max(65536).default(24e3),
+  section: external_exports.enum([
+    "ancestors",
+    "children",
+    "dependencies",
+    "criteria",
+    "evidence",
+    "references",
+    "decisions",
+    "remaining"
+  ]).optional()
+}).strict();
+var batchSchema = external_exports.object({
+  jobId: id,
+  preview: external_exports.boolean().default(true),
+  commands: external_exports.array(commandSchema).min(1).max(100)
+}).strict();
+var workspaceSchema = external_exports.object({
+  id,
+  path: external_exports.string().min(1).max(1e3),
+  mode: external_exports.enum(["shared", "isolated"]),
+  coordination: external_exports.enum(["shared", "independent"]).default("shared"),
+  expectedProjectId: external_exports.string().uuid()
+}).strict();
+var usageSchema = external_exports.object({
+  id,
+  executionId: id,
+  input: external_exports.number().int().nonnegative().max(1e10).default(0),
+  cacheRead: external_exports.number().int().nonnegative().max(1e10).default(0),
+  cacheWrite: external_exports.number().int().nonnegative().max(1e10).default(0),
+  output: external_exports.number().int().nonnegative().max(1e10).default(0),
+  source: external_exports.enum(["provider", "estimate"]),
+  category: external_exports.enum(["work", "coordination", "recovery"]).default("work"),
+  latencyMs: external_exports.number().nonnegative().max(864e5).optional(),
+  responseBytes: external_exports.number().int().nonnegative().max(1e9).optional()
+}).strict();
+var runCheckSchema = external_exports.object({ checkId: id, taskId: id, token: external_exports.string().min(1).max(200) }).strict();
+
 // src/mcp.ts
 var server = new McpServer({ name: "nexo", version: VERSION }, { maxToolInputElements: 2e4 });
 var root = () => findProject(process.env.NEXO_PROJECT_ROOT ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
@@ -37212,6 +37434,7 @@ var wrap = (fn) => async (args) => {
 server.registerTool(
   "init",
   {
+    title: "Nexo init",
     description: "Explicitly initialize Nexo in the current project. directoryMode=repository uses Git root; directory creates an independent nested/monorepo board in the current directory. Does not overwrite existing rules.",
     inputSchema: {
       name: external_exports.string().min(1).max(200).optional(),
@@ -37232,15 +37455,96 @@ server.registerTool(
 server.registerTool(
   "state",
   {
-    description: "Authoritative project snapshot: deliveries, workflow, hierarchical cards, teams, active/lost-contact agents and merge conflicts. Read before planning or updating expectedVersion.",
-    inputSchema: {},
+    title: "Nexo state",
+    description: "Compact project overview. Prefer query(view=task,id=...) for workers or query(view=delivery,id=...) for planners. Explicit full=true exports the entire board and can be large.",
+    inputSchema: { full: external_exports.boolean().default(false) },
     annotations: { readOnlyHint: true }
   },
-  wrap(async () => request("state", void 0, root()))
+  wrap(async (a) => request("query", { view: a.full ? "export" : "summary" }, root()))
 );
+for (const [name, description, inputSchema, route, readOnly] of [
+  [
+    "query",
+    "Bounded project queries: summary, task context, delivery page, assignment recovery, search by ID/path/alias, changes since durableRevision, diagnostics, execution history, explicit export. Preserve versions; page with nextCursor. maxBytes is an output budget. Never treat omitted data as absent.",
+    querySchema,
+    "query",
+    true
+  ],
+  [
+    "batch",
+    "Preview and atomically apply up to 100 ordered versioned commands. Default preview=true rolls back all changes. Review before preview=false. Stable jobId and commandIds support resumable imports across batches. Preserve source IDs/status, hierarchy, dependencies and evidence.",
+    batchSchema,
+    "batch",
+    false
+  ],
+  [
+    "schedule",
+    "Advisory ready queue ranked by downstream dependencies, capacity and explicit resource locks. Does not launch agents. Native Claude limits remain separate. Paginate with query.limit/cursor/maxBytes.",
+    external_exports.object({ deliveryId: external_exports.string().optional(), query: querySchema.optional() }),
+    "schedule",
+    true
+  ],
+  [
+    "workspace",
+    "Explicitly register a Git worktree against a canonical project identity. Records branch/base commit and diagnoses split boards. Set NEXO_PROJECT_ROOT to coordinator and NEXO_WORKSPACE to the registered directory; include workspaceId when claiming.",
+    workspaceSchema,
+    "workspace",
+    false
+  ],
+  [
+    "reconcile",
+    "Read-only manifest adapter comparison. Configure adapter path and normalized stageMap first. Reports missing/ambiguous IDs and source status differences. Synchronization requires explicit reviewed versioned commands, optionally batch preview.",
+    external_exports.object({ adapterId: external_exports.string() }),
+    "reconcile",
+    true
+  ],
+  [
+    "usage",
+    "Opt-in local structured usage sample per execution, idempotent by ID. Provider counts and estimates remain labeled. No prompts, credentials, automatic billing or external telemetry.",
+    usageSchema,
+    "usage",
+    false
+  ],
+  [
+    "run_check",
+    "Run an explicitly configured trusted check executable with fixed arguments, under a live task lease and optional resource lock. No shell interpolation or card gate prose. Binds a local check attestation to the exact clean integrated commit; returns structured PASS/FAIL/STALE evidence. Configure only commands the user trusts.",
+    runCheckSchema,
+    "run-check",
+    false
+  ],
+  [
+    "telemetry_clear",
+    "Delete local usage samples and coordination metrics on explicit user request. Does not delete tasks, evidence or execution records. Disable telemetry in project config to stop future samples.",
+    external_exports.object({}),
+    "telemetry-clear",
+    false
+  ],
+  [
+    "executions_export",
+    "Explicitly export closed sanitized execution summaries to versioned .nexo/executions. Excludes tokens, session identity, activity text, machine paths and live heartbeat state.",
+    external_exports.object({}),
+    "executions-export",
+    false
+  ]
+])
+  server.registerTool(
+    name,
+    {
+      description,
+      inputSchema,
+      annotations: {
+        title: "Nexo " + name.replaceAll("_", " "),
+        readOnlyHint: readOnly,
+        destructiveHint: name === "telemetry_clear",
+        openWorldHint: name === "run_check"
+      }
+    },
+    wrap(async (a) => request(route, a, root()))
+  );
 server.registerTool(
   "command",
   {
+    title: "Nexo command",
     description: "Create/update delivery, task or team; accept a delivery. Explicit commandId is idempotent; expectedVersion prevents overwrites. Create expectedVersion=0. Completed tasks require result + evidence (commit for gated workflows), resolved dependencies/children/blockers; leaseToken required for claimed tasks. Accepted delivery is immutable. Workflow is an array of {id,name,phase:queued|active|review|done,gate?}. Task fields: deliveryId,title,parentId?,teamId?,stageId,dependencies[],criteria[],blocker?,result,evidence:[{label,commit?,url?}]. Team: deliveryId,title,engine,workspace,maxAgents. Delivery: title,description,workflow,status,result,revisionOf?. Clear blocker using empty string.",
     inputSchema: commandSchema,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true }
@@ -37250,6 +37554,7 @@ server.registerTool(
 server.registerTool(
   "claim",
   {
+    title: "Nexo claim",
     description: "Register an agent on a card before work. Use native agentId and sessionId from hook context. Returns secret ephemeral lease token + monotonic fencing value. One executor per card; collaborators explicit; reviewers read only. Scopes are explicit relative files/directories, no globs. Overlapping writers and capacity excess are rejected. Claim moves queued task into active stage. Heartbeat before TTL, default 120s, max 600s.",
     inputSchema: claimSchema,
     annotations: { readOnlyHint: false }
@@ -37259,6 +37564,7 @@ server.registerTool(
 server.registerTool(
   "heartbeat",
   {
+    title: "Nexo heartbeat",
     description: "Renew your active lease and describe current work. Expired lease cannot be revived: re-read state and claim a new execution.",
     inputSchema: { token: external_exports.string(), activity: external_exports.string().max(500).optional() },
     annotations: { readOnlyHint: false }
@@ -37268,6 +37574,7 @@ server.registerTool(
 server.registerTool(
   "release",
   {
+    title: "Nexo release",
     description: "Remove an agent from the active card collection. Does not complete the card. Safe to repeat.",
     inputSchema: { token: external_exports.string() },
     annotations: { readOnlyHint: false, idempotentHint: true }
@@ -37277,6 +37584,7 @@ server.registerTool(
 server.registerTool(
   "board_open",
   {
+    title: "Nexo board open",
     description: "Open the current project live board in the default browser. One-time local authentication; no cloud service. Use for /board or /nexo:board.",
     inputSchema: { openBrowser: external_exports.boolean().default(true) },
     annotations: { readOnlyHint: false, openWorldHint: false }
@@ -37286,15 +37594,21 @@ server.registerTool(
 server.registerTool(
   "search",
   {
-    description: "Local SQLite FTS search across delivery, task and team titles/descriptions. Returns at most 50 results.",
-    inputSchema: { query: external_exports.string().max(200) },
+    title: "Nexo search",
+    description: "Compact local search across IDs, paths, aliases, evidence references and SQLite FTS titles/descriptions. Returns a bounded page; continue with cursor.",
+    inputSchema: {
+      query: external_exports.string().max(200),
+      cursor: external_exports.string().optional(),
+      limit: external_exports.number().int().min(1).max(100).default(20)
+    },
     annotations: { readOnlyHint: true }
   },
-  wrap(async (a) => request("search?q=" + encodeURIComponent(a.query), void 0, root()))
+  wrap(async (a) => request("query", { view: "search", ...a }, root()))
 );
 server.registerTool(
   "snapshot",
   {
+    title: "Nexo snapshot",
     description: "Flush a closed standalone SQLite snapshot through the durable generation visible at invocation before a Git commit. Concurrent requests share a publisher; transient file-sharing errors retry with a deadline. Failure preserves the live SQLite/outbox and last complete snapshot; inspect state.snapshot and retry before committing. Quiesce project changes for a commit that requires the latest generation. JSON events remain the merge/rebuild source. Never commit .nexo/local.",
     inputSchema: {},
     annotations: { readOnlyHint: false, idempotentHint: true }
@@ -37304,6 +37618,7 @@ server.registerTool(
 server.registerTool(
   "resolve_conflicts",
   {
+    title: "Nexo resolve conflicts",
     description: "Explicitly acknowledge losing events after reviewing each conflict and its causal descendants. This does not apply losing patches. Reapply intended content as a NEW versioned command after resolution; never guess which branch wins.",
     inputSchema: { eventIds: external_exports.array(external_exports.string().uuid()).min(1).max(200) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true }
